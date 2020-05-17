@@ -144,6 +144,7 @@ function update() {
             gameState = 'serve';
 
         } else if (gameState == 'serve') {
+            // todo use body.setVelocity instead (https://photonstorm.github.io/phaser3-docs/Phaser.Physics.Arcade.Body.html#setVelocity__anchor)
             ball.dx = Phaser.Math.RND.between(5, 10);
             ball.dx = servingPlayer == 1 ? ball.dx : -ball.dx;
             ball.dy = Phaser.Math.RND.between(-5, 5);

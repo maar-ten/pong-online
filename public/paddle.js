@@ -7,7 +7,7 @@ export default class Paddle extends Phaser.GameObjects.Rectangle {
 
     constructor(scene, x, y) {
         super(scene, x, y, PADDLE_WIDTH, PADDLE_HEIGHT, 0XFFFFFF);
-        scene.physics.world.enable(this);
+        scene.physics.world.enableBody(this);
         this.setOrigin(.5);
     }
 

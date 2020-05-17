@@ -6,7 +6,7 @@ export default class Ball extends Phaser.GameObjects.Rectangle {
 
     constructor(scene, x, y) {
         super(scene, x, y, BALL_SIZE, BALL_SIZE, 0XFFFFFF);
-        this.scene.physics.world.enable(this);
+        this.scene.physics.world.enableBody(this);
         this.setOrigin(.5);
         this.xOrigin = x;
         this.yOrigin = y;

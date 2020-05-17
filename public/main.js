@@ -1,9 +1,9 @@
 import Paddle from './paddle.js';
-// import Ball from './ball.js';
+import Ball from './ball.js';
 
 const WIDTH = 1280
 const HEIGHT = 768;
-const BALL_WIDTH = 16;
+const FONT = 'PressStart2P';
 
 new Phaser.Game({
     type: Phaser.AUTO,
@@ -22,11 +22,7 @@ new Phaser.Game({
     }
 });
 
-const font = 'PressStart2P';
-
 let gameState = 'start';
-let screenCenterX;
-let screenCenterY;
 let title;
 let subtitle;
 let player1ScoreText;
@@ -36,8 +32,6 @@ let player2Score = 0;
 let paddle1;
 let paddle2;
 let ball;
-let balldx;
-let balldy;
 let keys;
 let servingPlayer;
 
@@ -46,46 +40,23 @@ function preload() {
 }
 
 function create() {
-    screenCenterX = this.cameras.main.worldView.x + this.cameras.main.width / 2;
-    screenCenterY = this.cameras.main.worldView.y + this.cameras.main.height / 2;
+    const screenCenterX = this.cameras.main.worldView.x + this.cameras.main.width / 2;
+    const screenCenterY = this.cameras.main.worldView.y + this.cameras.main.height / 2;
 
-    title = this.add.text(screenCenterX, HEIGHT / 10, 'Welcome to Pong!', {
-        fontFamily: font,
-        fontSize: '32px'
-    }).setOrigin(.5).setVisible(false);
+    title = addText(this, screenCenterX, HEIGHT / 10, 32, 'Welcome to Pong!', false);
+    subtitle = addText(this, screenCenterX, HEIGHT / 10 + 48, 16, 'Press Enter to Play!', false);
 
-    subtitle = this.add.text(screenCenterX, HEIGHT / 10 + 48, 'Press Enter to Play!', {
-        fontFamily: font,
-        fontSize: '16px'
-    }).setOrigin(.5).setVisible(false);
+    player1ScoreText = addText(this, screenCenterX - 100, HEIGHT / 3, 56, player1Score);
+    player2ScoreText = addText(this, screenCenterX + 100, HEIGHT / 3, 56, player2Score);
 
-    player1ScoreText = this.add.text(screenCenterX - 100, HEIGHT / 3, player1Score, {
-        fontFamily: font,
-        fontSize: '56px'
-    }).setOrigin(.5);
-
-    player2ScoreText = this.add.text(screenCenterX + 100, HEIGHT / 3, player2Score, {
-        fontFamily: font,
-        fontSize: '56px'
-    }).setOrigin(.5);
-
+    // create paddles
     paddle1 = this.add.existing(new Paddle(this, 30, 120));
     paddle2 = this.add.existing(new Paddle(this, WIDTH - 30, HEIGHT - 120));
-    ball = this.add.rectangle(screenCenterX, screenCenterY, BALL_WIDTH, BALL_WIDTH, 0xffffff).setOrigin(.5);
 
-    this.physics.world.enable(ball);
-
-    let ballCollisionFn = () => {
-        balldx = -balldx * 1.03;
-        if (balldy < 0) {
-            balldy = -Phaser.Math.RND.between(1, 5);
-        } else {
-            balldy = Phaser.Math.RND.between(1, 5);
-        }
-    }
-
-    this.physics.add.collider(paddle1, ball, ballCollisionFn);
-    this.physics.add.collider(paddle2, ball, ballCollisionFn);
+    // create ball and add the paddles as colliders
+    ball = this.add.existing(new Ball(this, screenCenterX, screenCenterY));
+    ball.addCollider(paddle1);
+    ball.addCollider(paddle2);
 
     keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER');
 }
@@ -96,7 +67,7 @@ function update() {
         subtitle.setVisible(true);
 
     } else if (gameState == 'serve') {
-        resetBall();
+        ball.reset();
         title.text = `Player ${servingPlayer}\'s serve!`;
         subtitle.text = 'Press Enter to Serve!';
 
@@ -109,12 +80,11 @@ function update() {
 
         // reverse ball y-direction when it hits the top or bottom
         if (ball.y <= 0 + ball.height / 2 || ball.y >= HEIGHT - ball.height / 2) {
-            balldy = -balldy;
+            ball.dy *= -1;
         }
 
         // move the ball
-        ball.x = ball.x + balldx;
-        ball.y = ball.y + balldy;
+        ball.update();
 
         // player 1 scores
         if (ball.x - ball.width / 2 > WIDTH) {
@@ -174,9 +144,9 @@ function update() {
             gameState = 'serve';
 
         } else if (gameState == 'serve') {
-            balldx = Phaser.Math.RND.between(5, 10);
-            balldx = servingPlayer == 1 ? balldx : -balldx;
-            balldy = Phaser.Math.RND.between(-5, 5);
+            ball.dx = Phaser.Math.RND.between(5, 10);
+            ball.dx = servingPlayer == 1 ? ball.dx : -ball.dx;
+            ball.dy = Phaser.Math.RND.between(-5, 5);
             gameState = 'play';
 
         } else if (gameState == 'done') {
@@ -190,7 +160,11 @@ function update() {
     }
 }
 
-function resetBall() {
-    ball.x = screenCenterX;
-    ball.y = screenCenterY;
+function addText(scene, x, y, size, text, isVisible) {
+    const visible = isVisible || true;
+
+    return scene.add.text(x, y, text, {
+        fontFamily: FONT,
+        fontSize: size + 'px'
+    }).setOrigin(.5).setVisible(visible);
 }

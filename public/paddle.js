@@ -12,7 +12,7 @@ export default class Paddle extends Phaser.GameObjects.Rectangle {
     }
 
     update() {
-        this.y = this.y + this.dy;
+        this.y += this.dy;
     }
 
     up() {

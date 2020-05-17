@@ -1,9 +1,9 @@
 Pong
 ===
 
-Pong is a classic video game created in the 70s by Atari. I recreated it as the final project for the CS50 computer science course that I did in 2020.
+Pong is a classic video game created in the 70s by [Atari](https://en.wikipedia.org/wiki/Pong). I recreated it as the final project for the CS50 computer science course that I did in 2020.
 
-The goal of the project is to create the game in such a way that you can play it online against opponents.
+The goal of this project is to create the game in such a way that you can play it online against opponents.
 
 To help with the development of the game I used a JavaScript game library called [Phaser3](https://phaser.io/).
 

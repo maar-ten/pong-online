@@ -1,4 +1,4 @@
-import Paddle from './paddle.js';
+import { Paddle, PADDLE_SPEED } from './paddle.js';
 import Ball from './ball.js';
 
 const WIDTH = 1280
@@ -9,16 +9,17 @@ new Phaser.Game({
     type: Phaser.AUTO,
     width: WIDTH,
     height: HEIGHT,
+    pixelArt: true,
     physics: {
-        default: 'arcade',
-        arcade: {
-            debug: false
-        }
+        default: 'arcade'
     },
     scene: {
         preload: preload,
         create: create,
         update: update
+    },
+    audio: {
+        disableWebAudio: true
     }
 });
 
@@ -34,15 +35,27 @@ let paddle2;
 let ball;
 let keys;
 let servingPlayer;
+let wallHitSound;
+let ballOutSound;
 
 function preload() {
     this.cameras.main.backgroundColor.setTo(40, 45, 52, 255);
+
+    // sounds
+    this.load.audio('paddle-hit', 'assets/paddle-hit.mp3');
+    this.load.audio('wall-hit', 'assets/wall-hit.mp3');
+    this.load.audio('ball-out', 'assets/ball-out.mp3');
 }
 
 function create() {
     const screenCenterX = this.cameras.main.worldView.x + this.cameras.main.width / 2;
     const screenCenterY = this.cameras.main.worldView.y + this.cameras.main.height / 2;
 
+    // sounds
+    wallHitSound = this.sound.add('wall-hit');
+    ballOutSound = this.sound.add('ball-out');
+
+    // texts
     title = addText(this, screenCenterX, HEIGHT / 10, 32, 'Welcome to Pong!', false);
     subtitle = addText(this, screenCenterX, HEIGHT / 10 + 48, 16, 'Press Enter to Play!', false);
 
@@ -55,10 +68,15 @@ function create() {
 
     // create ball and add the paddles as colliders
     ball = this.add.existing(new Ball(this, screenCenterX, screenCenterY));
-    ball.addCollider(paddle1);
-    ball.addCollider(paddle2);
+    ball.addCollider(paddle1, this.sound.add('paddle-hit'));
+    ball.addCollider(paddle2, this.sound.add('paddle-hit'));
 
+    // keyboard mappings
     keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER');
+
+    // let objects exit left and right of screen
+    this.physics.world.setBoundsCollision(false, false, true, true);
+    this.physics.world.on('worldbounds', () => wallHitSound.play()); // is emitted by the ball
 }
 
 function update() {
@@ -78,16 +96,9 @@ function update() {
         title.visible = false;
         subtitle.visible = false;
 
-        // reverse ball y-direction when it hits the top or bottom
-        if (ball.y <= 0 + ball.height / 2 || ball.y >= HEIGHT - ball.height / 2) {
-            ball.dy *= -1;
-        }
-
-        // move the ball
-        ball.update();
-
         // player 1 scores
         if (ball.x - ball.width / 2 > WIDTH) {
+            ballOutSound.play();
             player1Score++;
             player1ScoreText.text = player1Score;
             servingPlayer = 2;
@@ -96,6 +107,7 @@ function update() {
 
         // player 2 scores
         if (ball.x + ball.width / 2 < 0) {
+            ballOutSound.play();
             player2Score++;
             player2ScoreText.text = player2Score;
             servingPlayer = 1;
@@ -115,27 +127,19 @@ function update() {
     }
 
     if (keys.W.isDown) {
-        if (paddle1.y > paddle1.height / 2) {
-            paddle1.up();
-        }
-    }
-
-    if (keys.S.isDown) {
-        if (paddle1.y < HEIGHT - paddle1.height / 2) {
-            paddle1.down();
-        }
+        paddle1.body.setVelocityY(-PADDLE_SPEED);
+    } else if (keys.S.isDown) {
+        paddle1.body.setVelocityY(PADDLE_SPEED);
+    } else {
+        paddle1.body.setVelocityY(0);
     }
 
     if (keys.UP.isDown) {
-        if (paddle2.y > paddle2.height / 2) {
-            paddle2.up();
-        }
-    }
-
-    if (keys.DOWN.isDown) {
-        if (paddle2.y < HEIGHT - paddle2.height / 2) {
-            paddle2.down();
-        }
+        paddle2.body.setVelocityY(-PADDLE_SPEED);
+    } else if (keys.DOWN.isDown) {
+        paddle2.body.setVelocityY(PADDLE_SPEED);
+    } else {
+        paddle2.body.setVelocityY(0);
     }
 
     if (Phaser.Input.Keyboard.JustDown(keys.ENTER)) {
@@ -144,10 +148,7 @@ function update() {
             gameState = 'serve';
 
         } else if (gameState == 'serve') {
-            // todo use body.setVelocity instead (https://photonstorm.github.io/phaser3-docs/Phaser.Physics.Arcade.Body.html#setVelocity__anchor)
-            ball.dx = Phaser.Math.RND.between(5, 10);
-            ball.dx = servingPlayer == 1 ? ball.dx : -ball.dx;
-            ball.dy = Phaser.Math.RND.between(-5, 5);
+            ball.setVelocity(servingPlayer == 1 ? 500 : -500);
             gameState = 'play';
 
         } else if (gameState == 'done') {

@@ -1,22 +1,27 @@
+const PADDLE_WIDTH = 15;
+const PADDLE_HEIGHT = 80;
+const PADDLE_SPEED = 10;
+
 export default class Paddle extends Phaser.GameObjects.Rectangle {
-    WIDTH = 15;
-    HEIGHT = 80;
-    dy = 0
+    dy = 0;
 
     constructor(scene, x, y) {
-        super(scene, x, y, this.WIDTH, this.HEIGHT);
+        super(scene, x, y, PADDLE_WIDTH, PADDLE_HEIGHT, 0XFFFFFF);
+        scene.physics.world.enable(this);
         this.setOrigin(.5);
-    }
-
-    create() {
-
     }
 
     update() {
         this.y = this.y + this.dy;
     }
 
-    setDy(dy) {
-        this.dy = dy;
+    up() {
+        this.dy = -PADDLE_SPEED;
+        this.update();
+    }
+
+    down() {
+        this.dy = PADDLE_SPEED;
+        this.update();
     }
 }

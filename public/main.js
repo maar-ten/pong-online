@@ -1,8 +1,8 @@
+import Paddle from './paddle.js';
+// import Ball from './ball.js';
+
 const WIDTH = 1280
 const HEIGHT = 768;
-const PADDLE_SPEED = 10;
-const PADDLE_HEIGHT = 80;
-const PADDLE_WIDTH = 16;
 const BALL_WIDTH = 16;
 
 new Phaser.Game({
@@ -69,12 +69,10 @@ function create() {
         fontSize: '56px'
     }).setOrigin(.5);
 
-    paddle1 = this.add.rectangle(30, 120, PADDLE_WIDTH, PADDLE_HEIGHT, 0xffffff).setOrigin(.5);
-    paddle2 = this.add.rectangle(WIDTH - 30, HEIGHT - 120, PADDLE_WIDTH, PADDLE_HEIGHT, 0xffffff).setOrigin(.5);
+    paddle1 = this.add.existing(new Paddle(this, 30, 120));
+    paddle2 = this.add.existing(new Paddle(this, WIDTH - 30, HEIGHT - 120));
     ball = this.add.rectangle(screenCenterX, screenCenterY, BALL_WIDTH, BALL_WIDTH, 0xffffff).setOrigin(.5);
 
-    this.physics.world.enable(paddle1);
-    this.physics.world.enable(paddle2);
     this.physics.world.enable(ball);
 
     let ballCollisionFn = () => {
@@ -148,25 +146,25 @@ function update() {
 
     if (keys.W.isDown) {
         if (paddle1.y > paddle1.height / 2) {
-            paddle1.y = paddle1.y - PADDLE_SPEED;
+            paddle1.up();
         }
     }
 
     if (keys.S.isDown) {
         if (paddle1.y < HEIGHT - paddle1.height / 2) {
-            paddle1.y = paddle1.y + PADDLE_SPEED;
+            paddle1.down();
         }
     }
 
     if (keys.UP.isDown) {
         if (paddle2.y > paddle2.height / 2) {
-            paddle2.y = paddle2.y - PADDLE_SPEED;
+            paddle2.up();
         }
     }
 
     if (keys.DOWN.isDown) {
         if (paddle2.y < HEIGHT - paddle2.height / 2) {
-            paddle2.y = paddle2.y + PADDLE_SPEED;
+            paddle2.down();
         }
     }
 

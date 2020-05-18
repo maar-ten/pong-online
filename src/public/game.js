@@ -1,7 +1,8 @@
 import { Paddle, PADDLE_SPEED } from './paddle.js';
 import Ball from './ball.js';
+import { GAME_STATE } from './constants.js';
 
-const WIDTH = 1280
+const WIDTH = 1280;
 const HEIGHT = 768;
 const FONT = 'PressStart2P';
 
@@ -23,7 +24,6 @@ new Phaser.Game({
     }
 });
 
-let gameState = 'start';
 let title;
 let subtitle;
 let player1ScoreText;
@@ -34,9 +34,28 @@ let paddle1;
 let paddle2;
 let ball;
 let keys;
-let servingPlayer;
 let wallHitSound;
 let ballOutSound;
+
+const socket = io();
+
+let gameState = GAME_STATE.CONNECT;
+let playerNumber = undefined;
+let servingPlayer = undefined;
+
+socket.on('state-change', data => {
+    console.log(data);
+    gameState = data.state;
+
+    switch (data.state) {
+        case GAME_STATE.SERVE:
+            playerNumber = data.number;
+            servingPlayer = data.server;
+            break;
+    }
+});
+// TODO
+// determine which paddle to use for this player and assign up/down keys to it
 
 function preload() {
     this.cameras.main.backgroundColor.setTo(40, 45, 52, 255);
@@ -56,8 +75,8 @@ function create() {
     ballOutSound = this.sound.add('ball-out');
 
     // texts
-    title = addText(this, screenCenterX, HEIGHT / 10, 32, 'Welcome to Pong!', false);
-    subtitle = addText(this, screenCenterX, HEIGHT / 10 + 48, 16, 'Press Enter to Play!', false);
+    title = addText(this, screenCenterX, HEIGHT / 10, 32, 'This is Pong!', true);
+    subtitle = addText(this, screenCenterX, HEIGHT / 10 + 48, 16, 'Press Enter to Play!', true);
 
     player1ScoreText = addText(this, screenCenterX - 100, HEIGHT / 3, 56, player1Score);
     player2ScoreText = addText(this, screenCenterX + 100, HEIGHT / 3, 56, player2Score);
@@ -77,22 +96,39 @@ function create() {
     // let objects exit left and right of screen
     this.physics.world.setBoundsCollision(false, false, true, true);
     this.physics.world.on('worldbounds', () => wallHitSound.play()); // is emitted by the ball
+
+    // react to web socket
+    socket.on('action', (data) => {
+        if (data.paddle1) {
+            paddle1.body.setVelocityY(data.paddle1);
+        }
+    });
 }
 
 function update() {
-    if (gameState == 'start') {
-        title.setVisible(true);
-        subtitle.setVisible(true);
+    if (gameState == GAME_STATE.CONNECT) {
+        title.text = 'This is Pong!';
+        subtitle.text = 'Connecting to server...';
 
-    } else if (gameState == 'serve') {
+    } else if (gameState == GAME_STATE.WAIT || gameState == GAME_STATE.DISCONNECT) {
+        title.visible = 'This is Pong!';
+        subtitle.text = 'Waiting For Other Player...';
+
+    } else if (gameState == GAME_STATE.START && !pressedEnter) {
+        title.text = `You are player ${playerNumber}`;
+        subtitle.text = 'Press Enter When Ready!';
+
+    } else if (gameState == GAME_STATE.SERVE) {
         ball.reset();
-        title.text = `Player ${servingPlayer}\'s serve!`;
-        subtitle.text = 'Press Enter to Serve!';
+        if (servingPlayer == playerNumber) {
+            title.text = 'You are Serving!'
+            subtitle.text = 'Press Enter to Serve!';
+        } else {
+            title.visible = false;
+            subtitle.text = 'Here Comes the Serve!';
+        }
 
-        title.visible = true;
-        subtitle.visible = true;
-
-    } else if (gameState == 'play') {
+    } else if (gameState == GAME_STATE.PLAY) {
         title.visible = false;
         subtitle.visible = false;
 
@@ -102,7 +138,7 @@ function update() {
             player1Score++;
             player1ScoreText.text = player1Score;
             servingPlayer = 2;
-            gameState = 'serve';
+            gameState = GAME_STATE.SERVE;
         }
 
         // player 2 scores
@@ -111,14 +147,14 @@ function update() {
             player2Score++;
             player2ScoreText.text = player2Score;
             servingPlayer = 1;
-            gameState = 'serve';
+            gameState = GAME_STATE.SERVE;
         }
 
         if (player1Score == 10 || player2Score == 10) {
-            gameState = 'done';
+            gameState = GAME_STATE.DONE;
         }
 
-    } else if (gameState == 'done') {
+    } else if (gameState == GAME_STATE.DONE) {
         let winner = player1Score == 10 ? 1 : 2;
         title.text = `Player ${winner} wins!`;
         subtitle.text = 'Press Enter to Play!';
@@ -128,10 +164,15 @@ function update() {
 
     if (keys.W.isDown) {
         paddle1.body.setVelocityY(-PADDLE_SPEED);
+
+        //todo better to use y-coordinates instead, but how frequent are we sending them?
+        // socket.emit('action', { paddle1: -PADDLE_SPEED });
     } else if (keys.S.isDown) {
         paddle1.body.setVelocityY(PADDLE_SPEED);
+        // socket.emit('action', { paddle1: PADDLE_SPEED });
     } else {
         paddle1.body.setVelocityY(0);
+        // socket.emit('action', { paddle1: 0 });
     }
 
     if (keys.UP.isDown) {
@@ -143,16 +184,15 @@ function update() {
     }
 
     if (Phaser.Input.Keyboard.JustDown(keys.ENTER)) {
-        if (gameState == 'start') {
-            servingPlayer = Phaser.Math.RND.between(1, 2);
-            gameState = 'serve';
+        if (gameState == GAME_STATE.START) {
 
-        } else if (gameState == 'serve') {
+        } else if (gameState == GAME_STATE.SERVE) {
             ball.setVelocity(servingPlayer == 1 ? 500 : -500);
-            gameState = 'play';
+            gameState = GAME_STATE.PLAY;
 
-        } else if (gameState == 'done') {
-            gameState = 'serve';
+        } else if (gameState == GAME_STATE.DONE) {
+            gameState = GAME_STATE.SERVE;
+            servingPlayer = player1Score > player2Score ? 2 : 1;
             player1Score = 0;
             player2Score = 0;
 

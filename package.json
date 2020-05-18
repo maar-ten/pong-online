@@ -19,11 +19,13 @@
     "url": "https://github.com/maar-ten/pong-online/issues"
   },
   "homepage": "https://github.com/maar-ten/pong-online#readme",
-  "main": "main.js",
+  "main": "src/main.js",
   "scripts": {
+    "serve": "node src/main.js"
   },
   "dependencies": {
+    "express": "4.17.1",
+    "socket.io": "2.3.0"
   },
-  "devDependencies": {
-  }
+  "devDependencies": {}
 }

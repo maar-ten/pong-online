@@ -5,6 +5,8 @@ const io = require('socket.io')(http);
 const { join } = require('path');
 
 const PORT = 3000;
+
+// todo use contants.js for these
 const MESSAGE = {
     GAME_STATE: 'game-state',
     ACTION: 'action'
@@ -99,6 +101,7 @@ io.on('connection', (socket) => {
                 break;
 
             case GAME_ACTION.SCORE:
+                //todo we should receive 2 messages, otherwise there was a bug (replay point?)
                 addPoint(action.player);
                 if (getPlayerByNumber(action.player).score === 10) {
                     emitGameStateDone();
@@ -132,6 +135,8 @@ function getRandomIntInclusive(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive 
+
+    //todo use a better randomizer
 }
 
 function getNextPlayerNumber() {

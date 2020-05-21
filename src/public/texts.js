@@ -70,14 +70,14 @@ export default class Texts {
             this.subtitle.visible = false;
 
         } else if (gameState === GAME_STATE.DONE) {
-            let winner = player1ScoreText === '10' ? 1 : 2;
+            let winner = this.player1ScoreText === '10' ? 1 : 2;
             let text = winner === playerNumber ? 'Win' : 'Lose'
             this.title.text = `You ${text}!`;
             this.subtitle.text = 'Press Enter to Play!';
             this.title.visible = true;
             this.subtitle.visible = true;
 
-            // add another game state after done in which one user has accepted to play again, to entice the user to continue
+            // todo add another game state after done in which one user has accepted to play again, to entice the user to continue
         }
     }
 }

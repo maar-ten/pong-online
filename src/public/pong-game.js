@@ -2,12 +2,7 @@ import Texts, { addText } from './texts.js';
 import Paddle, { PADDLE_SPEED } from './paddle.js';
 import Ball from './ball.js';
 import { GAME_STATE, GAME_ACTION, MESSAGE } from './constants.js';
-
-// some general settings
-const WIDTH = 900;
-const HEIGHT = 540;
-const FPS_LOGGER = true; // shows the FPS in the top left corner
-const MPS_LOGGER = true; // shows the MPS in the top left corner
+import cfg from './config.js';
 
 // open the communications channel
 const socket = io();
@@ -15,8 +10,8 @@ const socket = io();
 // Phaser game config
 new Phaser.Game({
   type: Phaser.AUTO,
-  width: WIDTH,
-  height: HEIGHT,
+  width: cfg.GAME_WIDTH,
+  height: cfg.GAME_HEIGHT,
   pixelArt: true,
   physics: {
     default: 'arcade'
@@ -33,7 +28,7 @@ new Phaser.Game({
 
 // assets
 let texts, fpsText, mpsText; // texts
-let paddleLeft , paddleRight, ball; // moving parts
+let paddleLeft, paddleRight, ball; // moving parts
 let wallHitSound, ballOutSound; // sounds
 let keys; // key bindings
 
@@ -53,7 +48,6 @@ let servingPlayer;
 let localPaddle;
 let remotePaddle;
 
-let roboticPaddle = true;
 let roboticPlayer = 2;
 let roboticTimeoutFrames = 0;
 
@@ -83,11 +77,11 @@ function create() {
   ballOutSound = this.sound.add('ball-out');
 
   // texts
-  texts = new Texts(this, HEIGHT, screenCenterX);
+  texts = new Texts(this, cfg.GAME_HEIGHT, screenCenterX);
 
   // create paddles
   paddleLeft = new Paddle(this, 30, 120);
-  paddleRight = new Paddle(this, WIDTH - 30, HEIGHT - 120);
+  paddleRight = new Paddle(this, cfg.GAME_WIDTH - 30, cfg.GAME_HEIGHT - 120);
 
   // create ball and add the paddles as colliders
   let paddleHitSound = this.sound.add('paddle-hit');
@@ -104,11 +98,11 @@ function create() {
 
   // fps monitor
   fpsText = addText(this, 10, 10, 8, 'FPS 0').setOrigin(0).setColor('#00ff00aa').setDepth(1);
-  fpsText.visible = FPS_LOGGER;
+  fpsText.visible = cfg.FPS_LOGGER;
 
   // messages monitor (message per second)
   mpsText = addText(this, 10, 20, 8, 'MPS 0').setOrigin(0).setColor('#00ff00aa').setDepth(1);
-  mpsText.visible = MPS_LOGGER;
+  mpsText.visible = cfg.MPS_LOGGER;
 
   // react to game state changes
   socket.on(MESSAGE.GAME_STATE, (data) => processGameStateMessage(data));
@@ -123,8 +117,8 @@ function create() {
 //-- Called by the game engine for every frame drawn to the screen
 function update() {
   // update performance statistics
-  if (FPS_LOGGER) updateFps();
-  if (MPS_LOGGER) updateMps();
+  if (cfg.FPS_LOGGER) updateFps();
+  if (cfg.MPS_LOGGER) updateMps();
 
   // check state of ball; did anyone scored?
   updateBallStatus();
@@ -136,7 +130,7 @@ function update() {
   updateLocalPaddle();
 
   // enable robotic paddle for robotic player
-  if (roboticPaddle && playerNumber == roboticPlayer) {
+  if (cfg.ROBOT_ENABLED && playerNumber == roboticPlayer) {
     updateRobot();
   }
 
@@ -202,8 +196,8 @@ function processGameStateMessage(data) {
   switch (data.state) {
     case GAME_STATE.START:
       playerNumber = data.number;
-      texts.setPlayer1Score = data.player1Score;
-      texts.setPlayer2Score = data.player2Score;
+      texts.setPlayer1Score(data.player1Score);
+      texts.setPlayer2Score(data.player2Score);
       localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
       remotePaddle = playerNumber === 2 ? paddleLeft : paddleRight;
 
@@ -213,8 +207,8 @@ function processGameStateMessage(data) {
     case GAME_STATE.SERVE:
       playerNumber = data.number;
       servingPlayer = data.server; // only difference with state: start
-      texts.setPlayer1Score = data.player1Score;
-      texts.setPlayer2Score = data.player2Score;
+      texts.setPlayer1Score(data.player1Score);
+      texts.setPlayer2Score(data.player2Score);
       localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
       remotePaddle = playerNumber === 2 ? paddleLeft : paddleRight;
 
@@ -226,8 +220,8 @@ function processGameStateMessage(data) {
       break;
 
     case GAME_STATE.DONE:
-      texts.setPlayer1Score = data.player1Score;
-      texts.setPlayer2Score = data.player2Score;
+      texts.setPlayer1Score(data.player1Score);
+      texts.setPlayer2Score(data.player2Score);
       break;
   }
 }
@@ -310,7 +304,7 @@ function updateMps() {
 function updateBallStatus() {
   if (gameState === GAME_STATE.PLAY) {
     // ball exits to the right (player 1 scores)
-    if (playerNumber === 1 && ball.x - ball.width / 2 > WIDTH) {
+    if (playerNumber === 1 && ball.x - ball.width / 2 > cfg.GAME_WIDTH) {
       playerScored(1);
     }
 

@@ -19,17 +19,28 @@ export default class Ball extends Phaser.GameObjects.Rectangle {
         this.y = this.yOrigin;
     }
 
-    addCollider(paddle, sound) {
+    addCollider(paddle, sound, callbackFn) {
         this.sound = sound;
+        this.collisionCallbackFn = callbackFn;
         this.scene.physics.add.collider(paddle, this, this.collisionFn, null, this);
     }
 
     collisionFn() {
-        // detect first contact and change ball's direction
+        // detect first contact and change ball's speed and direction
         if (this.body.wasTouching.none) {
             this.sound.play();
-            this.body.velocity.x = -this.body.velocity.x * 1.025
-            this.body.velocity.y *= 1.025
+            let angle = this.body.velocity.angle();
+
+            // increase speed
+            this.body.velocity.setAngle(0);
+            this.body.velocity.x = -this.body.velocity.x * 1.05;
+
+            // slightly change angle
+            this.body.velocity.setAngle(angle + this.angleChange);
+            console.log(this.body.velocity.angle());
+
+            // report back
+            this.collisionCallbackFn();
 
             // todo somehow make the angle change the same for local and remote player
             // let a = this.body.velocity.angle();
@@ -45,5 +56,10 @@ export default class Ball extends Phaser.GameObjects.Rectangle {
     setVelocity(velocity, angle) {
         this.body.setVelocity(velocity, 0);
         this.body.velocity.setAngle(angle);
+        this.angleChange = angle;
+    }
+
+    setAngleChange(angle) {
+        this.angleChange = angle;
     }
 }

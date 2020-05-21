@@ -102,8 +102,8 @@ function create() {
   // create ball and add the paddles as colliders
   ball = this.add.existing(new Ball(this, screenCenterX, screenCenterY));
   let paddleHitSound = this.sound.add('paddle-hit');
-  ball.addCollider(paddleLeft, paddleHitSound);
-  ball.addCollider(paddleRight, paddleHitSound);
+  ball.addCollider(paddleLeft, paddleHitSound, emitPaddleHit);
+  ball.addCollider(paddleRight, paddleHitSound, emitPaddleHit);
 
   // let objects exit left and right of screen
   this.physics.world.setBoundsCollision(false, false, true, true);
@@ -326,10 +326,42 @@ function handleRemoteAction(data) {
   msgCount++;
 
   switch (data.action) {
-    case GAME_ACTION.MOVE_PADDLE:
+    case GAME_ACTION.PADDLE_MOVE:
       remotePaddle.y = data.y;
       break;
+
+    case GAME_ACTION.PADDLE_HIT:
+      ball.setAngleChange(data.angleChange);
+      console.log(data.angleChange);
+      break;
   }
+}
+
+/**
+ * Emits the current paddle position when it has changed by a significant amount.
+ * 
+ * Amount of change can be configured by changing the 2 thresholds
+ */
+function emitPaddleMoved() {
+  let localPaddleDy = Math.abs(localPaddlepreviousY - localPaddle.y);
+  if (localPaddleFrames >= localPaddleFrameThreshold && localPaddleDy >= localPaddleYThreshold) {
+    msgCount++;
+    socket.emit(MESSAGE.ACTION, {
+      action: GAME_ACTION.PADDLE_MOVE,
+      y: localPaddle.y
+    });
+
+    // reset counters
+    localPaddleFrames = 0;
+    localPaddlepreviousY = localPaddle.y;
+  }
+}
+
+function emitPaddleHit() {
+  socket.emit(MESSAGE.ACTION, {
+    action: GAME_ACTION.PADDLE_HIT,
+    currentAngle: ball.body.velocity.angle()
+  });
 }
 
 // The FPS displayed is averaged over a number of frames to make it less jittery
@@ -361,26 +393,6 @@ function updateMps() {
     // reset counters
     msgTime = now;
     msgCount = 0;
-  }
-}
-
-/**
- * Emits the current paddle position when it has changed by a significant amount.
- * 
- * Amount of change can be configured by changing the 2 thresholds
- */
-function emitPaddleMoved() {
-  let localPaddleDy = Math.abs(localPaddlepreviousY - localPaddle.y);
-  if (localPaddleFrames >= localPaddleFrameThreshold && localPaddleDy >= localPaddleYThreshold) {
-    msgCount++;
-    socket.emit(MESSAGE.ACTION, {
-      action: GAME_ACTION.MOVE_PADDLE,
-      y: localPaddle.y
-    });
-
-    // reset counters
-    localPaddleFrames = 0;
-    localPaddlepreviousY = localPaddle.y;
   }
 }
 

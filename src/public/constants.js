@@ -13,7 +13,8 @@ export const GAME_STATE = {
 export const GAME_ACTION = {
     SERVE: 'serve',
     SCORE: 'score',
-    MOVE_PADDLE: 'paddle-move'
+    PADDLE_MOVE: 'paddle-move',
+    PADDLE_HIT: 'paddle-hit'
 };
 
 export const MESSAGE = {

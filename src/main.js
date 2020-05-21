@@ -20,7 +20,8 @@ const GAME_STATE = {
 const GAME_ACTION = {
     SERVE: 'serve',
     SCORE: 'score',
-    MOVE_PADDLE: 'paddle-move'
+    PADDLE_MOVE: 'paddle-move',
+    PADDLE_HIT: 'paddle-hit'
 };
 
 const players = [];
@@ -107,8 +108,15 @@ io.on('connection', (socket) => {
                 }
                 break;
 
-            case GAME_ACTION.MOVE_PADDLE:
+            case GAME_ACTION.PADDLE_MOVE:
                 socket.broadcast.emit(MESSAGE.ACTION, action);
+                break;
+
+            case GAME_ACTION.PADDLE_HIT:
+                io.emit(MESSAGE.ACTION, {
+                    action: GAME_ACTION.PADDLE_HIT,
+                    angleChange: getAngleChange(action.currentAngle)
+                });
                 break;
         }
     });
@@ -139,6 +147,13 @@ function getServingAngle(playerNumber) {
     let direction = playerNumber === 1 ? 0 : 180;
     let degrees = getRandomIntInclusive(-45, 45) + direction;
     return degrees / 180 * Math.PI; // conversion from degrees to radians: 180 DEG = PI radians
+}
+
+function getAngleChange(currentAngle) {
+    // todo check that the new angle will not be too steep
+    let angleChange = getRandomIntInclusive(0, 30) / 100; // 0 - 30 is between 0 - 17 degrees
+    let direction = getRandomIntInclusive(0, 1) === 1 ? 1 : -1;
+    return angleChange * direction;
 }
 
 function addPoint(playerNumber) {

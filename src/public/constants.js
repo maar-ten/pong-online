@@ -7,8 +7,7 @@ export const GAME_STATE = {
     SERVE: 'serve',
     SERVE_PLAY: 'serve-play',
     PLAY: 'play',
-    DONE: 'done',
-    DONE_START: 'done-start'
+    DONE: 'done'
 };
 
 export const GAME_ACTION = {

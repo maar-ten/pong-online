@@ -4,6 +4,7 @@ export default class Ball extends Phaser.GameObjects.Rectangle {
 
     constructor(scene, x, y) {
         super(scene, x, y, BALL_SIZE, BALL_SIZE, 0XFFFFFF);
+        scene.add.existing(this);
         this.scene.physics.add.existing(this);
         this.body.setCollideWorldBounds(true);
         this.body.onWorldBounds = true;
@@ -11,12 +12,14 @@ export default class Ball extends Phaser.GameObjects.Rectangle {
         this.setOrigin(.5);
         this.xOrigin = x;
         this.yOrigin = y;
+        this.angleChanges = [];
     }
 
     reset() {
         this.setVelocity(0, 0);
         this.x = this.xOrigin;
         this.y = this.yOrigin;
+        this.angleChanges = [];
     }
 
     addCollider(paddle, sound, callbackFn) {
@@ -36,30 +39,20 @@ export default class Ball extends Phaser.GameObjects.Rectangle {
             this.body.velocity.x = -this.body.velocity.x * 1.05;
 
             // slightly change angle
-            this.body.velocity.setAngle(angle + this.angleChange);
-            console.log(this.body.velocity.angle());
+            this.body.velocity.setAngle(angle + this.angleChanges.shift());
 
             // report back
             this.collisionCallbackFn();
-
-            // todo somehow make the angle change the same for local and remote player
-            // let a = this.body.velocity.angle();
-            // let da = Phaser.Math.RND.between(0, 17) * Phaser.Math.RND.pick([-1, 1]);
-
-            // this.body.velocity.setAngle(0);
-            // this.body.velocity.x *= -1.05;
-
-            // this.body.velocity.setAngle(a + (da  / 100));
         }
     }
 
     setVelocity(velocity, angle) {
         this.body.setVelocity(velocity, 0);
         this.body.velocity.setAngle(angle);
-        this.angleChange = angle;
+        this.angleChanges.push(angle);
     }
 
     setAngleChange(angle) {
-        this.angleChange = angle;
+        this.angleChanges.push(angle);
     }
 }

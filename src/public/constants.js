@@ -7,7 +7,8 @@ export const GAME_STATE = {
     SERVE: 'serve',
     SERVE_PLAY: 'serve-play',
     PLAY: 'play',
-    DONE: 'done'
+    DONE: 'done',
+    DONE_START: 'done-start'
 };
 
 export const GAME_ACTION = {
@@ -20,5 +21,6 @@ export const GAME_ACTION = {
 export const MESSAGE = {
     GAME_STATE: 'game-state',
     ACTION: 'action',
-    READY: 'ready'
+    READY: 'ready',
+    CONNECT_ERROR: 'connect_error'
 }

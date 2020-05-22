@@ -20,9 +20,13 @@ All this software is free to use and is created by many unsung heroes of the int
 
 Local installation
 ---
-If you have NodeJS installed you can start the project locally by running the `node src/main.js` inside the project folder.
+First install [NodeJS](https://nodejs.org/) version LTS 12.13.0 or newer, if you haven't already.
 
-Then open http://localhost:3000 in a web browser to play solo.
+Run `node install` inside the project folder. This will install the app and its dependencies.
+
+Run `node src/main.js` to start the game server. It will be listening on port 3000 by default.
+
+Then open http://localhost:3000 in a web browser to play solo against the computer.
 
 
 Server installation
@@ -30,7 +34,7 @@ Server installation
 Equal to the local installation.
 Optionally disable the robot and the performance logging in `src/public/config.js`.
 
-Send the url of the server to your friend and have some fun!
+Send the url of the server to your friend and play Pong together!
 
 
 License

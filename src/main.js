@@ -83,7 +83,7 @@ io.on('connection', (socket) => {
         // reset remaining player
         players.forEach(player => {
             player.ready = false;
-            // would be nice to keep the scores in case the other player left by accident
+            //todo would be nice to keep the scores in case the other player left by accident
             player.score = 0;
             socket.broadcast.emit(MESSAGE.GAME_STATE, { state: GAME_STATE.DISCONNECT });
         });
@@ -112,6 +112,7 @@ io.on('connection', (socket) => {
                 break;
 
             case GAME_ACTION.PADDLE_MOVE:
+                // send to all clients except the sender
                 socket.broadcast.emit(MESSAGE.ACTION, action);
                 break;
 
@@ -183,7 +184,7 @@ function getPlayerScore(number) {
 
 function emitGameStateStart() {
     players.forEach(player => {
-        io.sockets.connected[player.id].emit(MESSAGE.GAME_STATE, {
+        io.to(player.id).emit(MESSAGE.GAME_STATE, {
             state: GAME_STATE.START,
             number: player.number,
             player1Score: getPlayerScore(1),
@@ -194,7 +195,7 @@ function emitGameStateStart() {
 
 function emitGameStateServe(server) {
     players.forEach(player => {
-        io.sockets.connected[player.id].emit(MESSAGE.GAME_STATE, {
+        io.to(player.id).emit(MESSAGE.GAME_STATE, {
             state: GAME_STATE.SERVE,
             number: player.number,
             server: server,

@@ -1,4 +1,4 @@
-import {GAME_STATE} from './constants.js';
+import { GAME_STATE } from './constants.js';
 
 const FONT = 'PressStart2P';
 
@@ -28,56 +28,66 @@ export default class Texts {
     }
 
     update(gameState, playerNumber, servingPlayer) {
-        if (gameState === GAME_STATE.CONNECT) {
-            this.title.text = 'This is Pong!';
-            this.subtitle.text = 'Connecting to server...';
-            this.title.visible = true;
-            this.subtitle.visible = true;
+        switch (gameState) {
+            case GAME_STATE.CONNECT:
+                this.title.text = 'This is Pong!';
+                this.subtitle.text = 'Connecting to server...';
+                this.title.visible = true;
+                this.subtitle.visible = true;
+                break;
 
-        } else if (gameState === GAME_STATE.WAIT || gameState === GAME_STATE.DISCONNECT) {
-            this.title.text = 'This is Pong!';
-            this.subtitle.text = 'Waiting For Other Player...';
-            this.title.visible = true;
-            this.subtitle.visible = true;
+            case GAME_STATE.WAIT:
+            case GAME_STATE.DISCONNECT:
+                this.title.text = 'This is Pong!';
+                this.subtitle.text = 'Waiting For Other Player...';
+                this.title.visible = true;
+                this.subtitle.visible = true;
+                break;
 
-        } else if (gameState === GAME_STATE.START) {
-            let direction = playerNumber === 1 ? '<- Your Side' : 'Your Side ->';
-            this.title.text = `${direction}`;
-            this.subtitle.text = 'Press Enter When Ready!';
-            this.title.visible = true;
-            this.subtitle.visible = true;
+            case GAME_STATE.START:
+                let direction = playerNumber === 1 ? '<- Your Side' : 'Your Side ->';
+                this.title.text = `${direction}`;
+                this.subtitle.text = 'Press Enter When Ready!';
+                this.title.visible = true;
+                this.subtitle.visible = true;
+                break;
 
-        } else if (gameState === GAME_STATE.START_SERVE) {
-            this.subtitle.text = 'Waiting For Other Player...';
-            this.title.visible = false;
-            this.subtitle.visible = true;
+            case GAME_STATE.START_SERVE:
+                this.subtitle.text = 'Waiting For Other Player...';
+                this.title.visible = false;
+                this.subtitle.visible = true;
+                break;
 
-        } else if (gameState === GAME_STATE.SERVE) {
-            if (servingPlayer === playerNumber) {
-                this.title.text = 'You are Serving!';
-                this.subtitle.text = 'Press Enter to Serve!';
+            case GAME_STATE.SERVE:
+                if (servingPlayer === playerNumber) {
+                    this.title.text = 'You are Serving!';
+                    this.subtitle.text = 'Press Enter to Serve!';
 
-            } else {
-                this.title.text = 'Opponent Serves!';
-                this.subtitle.text = 'Here Comes the Serve!';
-            }
+                } else {
+                    this.title.text = 'Opponent Serves!';
+                    this.subtitle.text = 'Here Comes the Serve!';
+                }
 
-            this.title.visible = true;
-            this.subtitle.visible = true;
+                this.title.visible = true;
+                this.subtitle.visible = true;
+                break;
 
-        } else if (gameState === GAME_STATE.PLAY) {
-            this.title.visible = false;
-            this.subtitle.visible = false;
+            case GAME_STATE.PLAY:
+                this.title.visible = false;
+                this.subtitle.visible = false;
+                break;
 
-        } else if (gameState === GAME_STATE.DONE) {
-            let winner = this.player1ScoreText === '10' ? 1 : 2;
-            let text = winner === playerNumber ? 'Win' : 'Lose'
-            this.title.text = `You ${text}!`;
-            this.subtitle.text = 'Press Enter to Play!';
-            this.title.visible = true;
-            this.subtitle.visible = true;
+            case GAME_STATE.DONE:
+                let winner = this.player1ScoreText === '10' ? 1 : 2;
+                let text = winner === playerNumber ? 'Win' : 'Lose'
+                this.title.text = `You ${text}!`;
+                this.subtitle.text = 'Press Enter to Play!';
+                this.title.visible = true;
+                this.subtitle.visible = true;
+                break;
 
             // todo add another game state after done in which one user has accepted to play again, to entice the user to continue
+
         }
     }
 }
@@ -89,6 +99,6 @@ export function addText(scene, x, y, size, text) {
             fontFamily: FONT,
             fontSize: size + 'px',
         })
-        .setOrigin(0.5);
+        .setOrigin(0.5); // sets the origin of the object in the center
 }
 

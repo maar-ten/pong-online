@@ -21,5 +21,8 @@ export const MESSAGE = {
     GAME_STATE: 'game-state',
     ACTION: 'action',
     READY: 'ready',
-    CONNECT_ERROR: 'connect_error'
+    CONNECT_ERROR: 'connect_error',
+    CONNECTION: 'connection',
+    DISCONNECT: 'disconnect',
+    LATENCY: 'latency'
 }

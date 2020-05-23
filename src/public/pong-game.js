@@ -27,7 +27,7 @@ new Phaser.Game({
 });
 
 // assets
-let texts, fpsText, mpsText; // texts
+let texts, fpsText, mpsText, latText; // texts
 let paddleLeft, paddleRight, ball; // moving parts
 let wallHitSound, ballOutSound; // sounds
 let keys; // key bindings
@@ -37,9 +37,15 @@ let time = Date.now();
 let fpsTotal = 0;
 let fpsCount = 0;
 
-// messages rate
-let msgTime = Date.now();
-let msgCount = 0;
+// messages rate (message per second)
+let mpsTime = Date.now();
+let mpsCount = 0;
+
+// network latency (milliseconds)
+let latencyTime = Date.now();
+let latencyInterval = 1; // in seconds
+let latencyTotal = 0;
+let latencyCount = 0;
 
 // game state variables
 let gameState = GAME_STATE.CONNECT;
@@ -53,8 +59,8 @@ let roboticTimeoutFrames = 0;
 
 let localPaddleFrames = 0;
 let localPaddlePreviousY;
-let localPaddleYThreshold = 15; // dy in pixels between two paddle positions before a change is detected. Lower values generate more messages
-let localPaddleFrameThreshold = 2; // the amount of frames that dy must live before a change is detected. Lower values generate more messages
+let localPaddleYThreshold = 5; // dy in pixels between two paddle positions before a change is detected. Lower values generate more messages
+let localPaddleFrameThreshold = 1; // the amount of frames that dy must live before a change is detected. Lower values generate more messages
 
 //-- Called by the game engine and used for loading assets over the internet
 function preload() {
@@ -98,11 +104,19 @@ function create() {
 
   // fps monitor
   fpsText = addText(this, 10, 10, 8, 'FPS 0').setOrigin(0).setColor('#00ff00aa').setDepth(1);
-  fpsText.visible = cfg.FPS_LOGGER;
+  fpsText.visible = cfg.PERF_MON;
 
-  // messages monitor (message per second)
+  // messages monitor
   mpsText = addText(this, 10, 20, 8, 'MPS 0').setOrigin(0).setColor('#00ff00aa').setDepth(1);
-  mpsText.visible = cfg.MPS_LOGGER;
+  mpsText.visible = cfg.PERF_MON;
+
+  // latency monitor
+  latText = addText(this, 10, 30, 8, 'LAT 0').setOrigin(0).setColor('#00ff00aa').setDepth(1);
+  latText.visible = cfg.PERF_MON;
+  socket.on(MESSAGE.LATENCY, (data) => {
+    latencyTotal += Date.now() - data.time;
+    latencyCount++;
+  });
 
   // react to game state changes
   socket.on(MESSAGE.GAME_STATE, (data) => processGameStateMessage(data));
@@ -117,8 +131,7 @@ function create() {
 //-- Called by the game engine for every frame drawn to the screen
 function update() {
   // update performance statistics
-  if (cfg.FPS_LOGGER) updateFps();
-  if (cfg.MPS_LOGGER) updateMps();
+  if (cfg.PERF_MON) updateStats();
 
   // check state of ball; did anyone scored?
   updateBallStatus();
@@ -139,31 +152,21 @@ function update() {
 
 function updateEnterKeyState() {
   if (Phaser.Input.Keyboard.JustDown(keys.ENTER)) {
-    if (gameState === GAME_STATE.START) {
-      gameState = GAME_STATE.START_SERVE;
-      ball.reset();
+    switch (gameState) {
+      case GAME_STATE.START:
+      // same as state done
+      case GAME_STATE.DONE:
+        emitPlayerReady(playerNumber);
+        break;
 
-      socket.emit(MESSAGE.READY, {
-        player: playerNumber,
-        ready: true
-      });
-    }
-
-    else if (gameState === GAME_STATE.SERVE && servingPlayer == playerNumber) {
-      socket.emit(MESSAGE.ACTION, {
-        action: GAME_ACTION.SERVE,
-        player: playerNumber,
-      });
-    }
-
-    else if (gameState === GAME_STATE.DONE) {
-      gameState = GAME_STATE.START_SERVE;
-      ball.reset();
-
-      socket.emit(MESSAGE.READY, {
-        player: playerNumber,
-        ready: true
-      });
+      case GAME_STATE.SERVE:
+        if (servingPlayer == playerNumber) {
+          socket.emit(MESSAGE.ACTION, {
+            action: GAME_ACTION.SERVE,
+            player: playerNumber
+          });
+        }
+        break;
     }
   }
 }
@@ -228,7 +231,7 @@ function processGameStateMessage(data) {
 
 // Handle incoming action messages from the other player
 function processRemoteActionMessage(data) {
-  msgCount++;
+  mpsCount++;
 
   switch (data.action) {
     case GAME_ACTION.PADDLE_MOVE:
@@ -244,12 +247,12 @@ function processRemoteActionMessage(data) {
 /**
  * Emits the current paddle position when it has changed by a significant amount.
  * 
- * Amount of change can be configured by changing the 2 thresholds
+ * Amount of change can be configured by changing the thresholds: localPaddleFrameThreshold and localPaddleYThreshold
  */
 function emitPaddleMoved() {
   let localPaddleDy = Math.abs(localPaddlePreviousY - localPaddle.y);
   if (localPaddleFrames >= localPaddleFrameThreshold && localPaddleDy >= localPaddleYThreshold) {
-    msgCount++;
+    mpsCount++;
     socket.emit(MESSAGE.ACTION, {
       action: GAME_ACTION.PADDLE_MOVE,
       y: localPaddle.y
@@ -268,36 +271,12 @@ function emitPaddleHit() {
   });
 }
 
-// The FPS displayed is averaged over a number of frames to make it less jittery
-function updateFps() {
-  let averageFrameCount = 180;
-  let now = Date.now();
-  fpsTotal += Math.round(1000 / (now - time));
-  fpsCount++;
-  time = now;
-
-  if (fpsCount >= averageFrameCount) {
-    fpsText.text = 'FPS ' + Math.round(fpsTotal / fpsCount);
-
-    // reset counters
-    fpsCount = 0;
-    fpsTotal = 0;
-  }
-}
-
-// The MPS (messages per second) displayed is averaged over a number of frames to make it less jittery
-function updateMps() {
-  let threshold = 3 * 1000;
-  let now = Date.now();
-
-  if (now - msgTime >= threshold) {
-    let averageMsgCount = Math.round(msgCount / threshold * 1000);
-    mpsText.text = 'MPS ' + averageMsgCount;
-
-    // reset counters
-    msgTime = now;
-    msgCount = 0;
-  }
+function emitPlayerReady(playerNumber) {
+  gameState = GAME_STATE.START_SERVE;
+  socket.emit(MESSAGE.READY, {
+    player: playerNumber,
+    ready: true
+  });
 }
 
 // Registers when one of the players scores a point
@@ -327,7 +306,62 @@ function playerScored(playerNumber) {
   gameState = GAME_STATE.SERVE_PLAY;
 }
 
-// Mainly used while debugging the game
+function updateStats() {
+  updateFps();
+  updateMps();
+  updateLat();
+}
+
+// The FPS displayed is averaged over a number of frames to make it less jittery
+function updateFps() {
+  const averageFrameCount = 180;
+  const now = Date.now();
+  fpsTotal += Math.round(1000 / (now - time));
+  fpsCount++;
+  time = now;
+
+  if (fpsCount >= averageFrameCount) {
+    fpsText.text = 'FPS ' + Math.round(fpsTotal / fpsCount);
+
+    // reset counters
+    fpsCount = 0;
+    fpsTotal = 0;
+  }
+}
+
+// The MPS (messages per second) displayed is averaged over a number of frames to make it less jittery
+function updateMps() {
+  const threshold = 3 * 1000;
+  const now = Date.now();
+
+  if (now - mpsTime >= threshold) {
+    const averageMsgCount = Math.round(mpsCount / threshold * 1000);
+    mpsText.text = 'MPS ' + averageMsgCount;
+
+    // reset counters
+    mpsTime = now;
+    mpsCount = 0;
+  }
+}
+
+// The LAT (latency) displayed is measured for a single message at a set interval
+function updateLat() {
+  if (latencyCount >= 3) {
+    latText.text = 'LAT: ' + Math.round(latencyTotal / latencyCount);
+    latencyTotal = 0;
+    latencyCount = 0;
+  }
+
+  const now = Date.now();
+  if (now >= latencyTime + (latencyInterval * 1000)) {
+    socket.emit(MESSAGE.LATENCY, {
+      time: now
+    });
+    latencyTime = now;
+  }
+}
+
+// Code for controlling one of the paddles automatically
 function updateRobot() {
 
   // move the paddle towards the ball
@@ -340,31 +374,32 @@ function updateRobot() {
     localPaddle.body.setVelocityY(0);
   }
 
-  // handle game state changes 
-  if (gameState === GAME_STATE.START) {
-    gameState = GAME_STATE.START_SERVE;
-    socket.emit(MESSAGE.READY, {
-      player: playerNumber,
-      ready: true
-    });
+  // handle game state changes
+  switch (gameState) {
+    case GAME_STATE.START:
+      emitPlayerReady(playerNumber);
+      break;
 
-  } else if (gameState == GAME_STATE.SERVE && servingPlayer == roboticPlayer) {
-    roboticTimeoutFrames++;
+    case GAME_STATE.SERVE:
+      if (servingPlayer == roboticPlayer) {
+        roboticTimeoutFrames++;
 
-    // the robot serves with a little delay
-    if (roboticTimeoutFrames >= 100) {
-      socket.emit(MESSAGE.ACTION, {
-        action: GAME_ACTION.SERVE,
-        player: playerNumber,
-      });
-      roboticTimeoutFrames = 0;
-    }
+        // the robot serves with a little delay
+        if (roboticTimeoutFrames >= 100) {
+          socket.emit(MESSAGE.ACTION, {
+            action: GAME_ACTION.SERVE,
+            player: playerNumber,
+          });
+          roboticTimeoutFrames = 0;
+        }
 
-  } else if (gameState == GAME_STATE.DONE && servingPlayer == roboticPlayer) {
-    gameState = GAME_STATE.START_SERVE;
-    socket.emit(MESSAGE.READY, {
-      player: playerNumber,
-      ready: true
-    });
+      }
+      break;
+
+    case GAME_STATE.DONE:
+      if (servingPlayer == roboticPlayer) {
+        emitPlayerReady(playerNumber);
+      }
+      break;
   }
 }

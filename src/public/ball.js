@@ -29,6 +29,8 @@ export default class Ball extends Phaser.GameObjects.Rectangle {
     }
 
     collisionFn() {
+        //todo correctly return the ball when it hits the top or bottom of a paddle
+        
         // detect first contact and change ball's speed and direction
         if (this.body.wasTouching.none) {
             this.sound.play();

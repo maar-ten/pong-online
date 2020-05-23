@@ -25,7 +25,7 @@ const players = [];
 app.use(express.static(join(__dirname, 'public')));
 
 // configure web socket connections
-io.on('connection', (socket) => {
+io.on(MESSAGE.CONNECTION, (socket) => {
 
     // deny new players when the maximum number of players is exceeded
     if (players.length === 2) {
@@ -55,18 +55,19 @@ io.on('connection', (socket) => {
         emitGameStateStart();
     }
 
-    socket.on('ready', data => {
+    socket.on(MESSAGE.READY, (data) => {
         getPlayerByNumber(data.player).ready = data.ready;
         let readyPlayers = players.filter(player => player.ready === true).length;
         if (readyPlayers === 2) {
             // both players are ready.
             console.info('Both players are ready. Changing state to serve');
-            let server = getRandomIntInclusive(1, 2);
-            emitGameStateServe(server);
+            let servingPlayer = getRandomIntInclusive(1, 2);
+            players.forEach(player => player.score = 0); // reset scores
+            emitGameStateServe(servingPlayer);
         }
     });
 
-    socket.on('disconnect', () => {
+    socket.on(MESSAGE.DISCONNECT, () => {
         // delete player when their client disconnects
         const player = getPlayerById(socket.id);
         if (player) {
@@ -95,7 +96,6 @@ io.on('connection', (socket) => {
                 break;
 
             case GAME_ACTION.SCORE:
-                //todo we should receive 2 messages, otherwise there was a bug (replay point?)
                 addPoint(action.player);
                 if (getPlayerByNumber(action.player).score === 10) {
                     emitGameStateDone();
@@ -118,11 +118,15 @@ io.on('connection', (socket) => {
                 break;
         }
     });
+
+    socket.on(MESSAGE.LATENCY, (data) => {
+        socket.emit(MESSAGE.LATENCY, data);
+    });
 });
 
 // start listening for requests
 httpServer.listen(PORT, () => {
-    console.info(`listening on *:${PORT}`);
+    console.info(`Server online and listening on *:${PORT}`);
 });
 
 // copied from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
@@ -131,7 +135,7 @@ function getRandomIntInclusive(min, max) {
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive 
 
-    //todo use a better randomizer
+    //todo perhaps use a better randomizer?
 }
 
 function getNextPlayerNumber() {
@@ -207,6 +211,7 @@ function emitGameStateDone() {
     });
 }
 
+// remember to escape backslashes
 console.info(`
  _____ _     _     ___     ____                   _ _
 |_   _| |__ (_)___|_ _|___|  _ \\ ___  _ __   __ _| | |

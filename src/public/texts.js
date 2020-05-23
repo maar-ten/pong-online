@@ -78,8 +78,8 @@ export default class Texts {
                 break;
 
             case GAME_STATE.DONE:
-                let winner = this.player1ScoreText === '10' ? 1 : 2;
-                let text = winner === playerNumber ? 'Win' : 'Lose'
+                const winner = this.player1ScoreText === '10' ? 1 : 2;
+                const text = winner === playerNumber ? 'Win' : 'Lose'
                 this.title.text = `You ${text}!`;
                 this.subtitle.text = 'Press Enter to Play!';
                 this.title.visible = true;

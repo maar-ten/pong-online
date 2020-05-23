@@ -37,6 +37,8 @@ If you want to play online against a friend, you need to install the software on
 
 You probably want to disable the robot and perhaps also the performance logging. Both are configured in [src/public/config.js](src/public/config.js).
 
+Then start the server using `nohup node src/main.js &`. After that, if you leave the shell the program will keep running.
+
 Send the url of the server to your friend and have some fun! 🏓
 
 

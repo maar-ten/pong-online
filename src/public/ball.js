@@ -29,22 +29,27 @@ export default class Ball extends Phaser.GameObjects.Rectangle {
     }
 
     collisionFn() {
-        //todo correctly return the ball when it hits the top or bottom of a paddle
-        
-        // detect first contact and change ball's speed and direction
         if (this.body.wasTouching.none) {
             this.sound.play();
-            let angle = this.body.velocity.angle();
 
-            // increase speed
-            this.body.velocity.setAngle(0);
-            this.body.velocity.x = -this.body.velocity.x * 1.05;
+            if (this.body.touching.left || this.body.touching.right) {
+                // increase speed
+                this.body.velocity.setAngle(0);
+                this.body.velocity.x = -this.body.velocity.x * 1.05;
 
-            // slightly change angle
-            this.body.velocity.setAngle(angle + this.angleChanges.shift());
+                // slightly change angle
+                const angle = this.body.velocity.angle();
+                this.body.velocity.setAngle(angle + this.angleChanges.shift());
 
-            // report back
-            this.collisionCallbackFn();
+                // report back to get a new angle
+                this.collisionCallbackFn();
+
+            } else if (this.body.touching.top || this.body.touching.bottom) {
+                // ball hit either the top or bottom
+                this.body.velocity.x = -this.body.velocity.x;
+                this.body.velocity.y = -this.body.velocity.y;
+
+            }
         }
     }
 

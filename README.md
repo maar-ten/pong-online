@@ -3,12 +3,12 @@ Pong 🏓
 
 Pong is a classic video game created in the 70s by [Atari](https://en.wikipedia.org/wiki/Pong). I recreated this game as the final project for the CS50 computer science course that I did in 2020.
 
-The goal of this project is to recreate the game in such a way that you can play it against an opponent that is online elsewhere on the internet.
+The goal of this project is to recreate an online multiplayer version of the original Pong game.
 
 Development
 ---
 To help with the development of the game I used a number of freely available resources:
-- JavaScript game library [Phaser3](https://phaser.io/) 🐱‍🏍
+- JavaScript game library [Phaser3](https://phaser.io/) 🦄
 - Sounds created with [Bfxr](https://www.bfxr.net/) 🏆
 - Sounds converted to MP3 with [Convertio](https://convertio.co/)
 - Press Start 2P font by [Codeman38](https://www.fontspace.com/codeman38) 🤩
@@ -20,21 +20,24 @@ All this software is free to use and is created by many unsung heroes of the int
 
 Local installation
 ---
-First install [NodeJS](https://nodejs.org/) version LTS 12.13.0 or newer, if you haven't already.
+First install [NodeJS](https://nodejs.org/) version 13.2.0 or newer, if you haven't already.
 
 Run `node install` inside the project folder. This will install the app and its dependencies.
 
 Run `node src/main.js` to start the game server. It will be listening on port 3000 by default.
 
-Then open http://localhost:3000 in a web browser to play solo against the computer.
+Then go to http://localhost:3000 in a web browser.
+
+If you want to play a game against the computer, open the same url in a second browser window. Put them side by and have some fun! 🤖
 
 
 Server installation
 ---
-Equal to the local installation.
-Optionally disable the robot and the performance logging in `src/public/config.js`.
+If you want to play online against a friend, you need to install the software on a public server that can accept incoming connnections.
 
-Send the url of the server to your friend and play Pong together!
+You probably want to disable the robot and perhaps also the performance logging. Both are configured in [src/public/config.js](src/public/config.js).
+
+Send the url of the server to your friend and have some fun! 🏓
 
 
 License

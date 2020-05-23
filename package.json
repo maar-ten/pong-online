@@ -19,6 +19,7 @@
     "url": "https://github.com/maar-ten/pong-online/issues"
   },
   "homepage": "https://github.com/maar-ten/pong-online#readme",
+  "type": "module",
   "main": "src/main.js",
   "scripts": {
     "serve": "node src/main.js"

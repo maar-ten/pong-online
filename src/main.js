@@ -1,38 +1,32 @@
-const express = require('express');
+/**
+ * Note that I'm using ES6 import statements instead of NodeJS's require.
+ * This makes it simple to share code with the web application.
+ *
+ * Although still experimental, the feature has been in NodeJS since version 12.
+ * For more information see: https://nodejs.org/api/esm.html#esm_ecmascript_modules.
+ */
+
+import express from  'express';
+import http from 'http';
+import socketio from 'socket.io';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+import { GAME_ACTION, GAME_STATE, MESSAGE } from './public/constants.js';
+
 const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
-const { join } = require('path');
-
+const httpServer = http.createServer(app);
+const io  = socketio(httpServer);
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = 3000;
-
-// todo use contants.js for these
-const MESSAGE = {
-    GAME_STATE: 'game-state',
-    ACTION: 'action'
-};
-const GAME_STATE = {
-    DISCONNECT: 'disconnect',
-    WAIT: 'wait',
-    START: 'start',
-    SERVE: 'serve',
-    PLAY: 'play',
-    DONE: 'done'
-};
-const GAME_ACTION = {
-    SERVE: 'serve',
-    SCORE: 'score',
-    PADDLE_MOVE: 'paddle-move',
-    PADDLE_HIT: 'paddle-hit'
-};
-
 const players = [];
 
-// serve static files from public folder
+// serve static game files from public folder
 app.use(express.static(join(__dirname, 'public')));
 
 // configure web socket connections
 io.on('connection', (socket) => {
+
     // deny new players when the maximum number of players is exceeded
     if (players.length === 2) {
         console.info('Maximum amount of players exceeded. Disconnecting new player.');
@@ -127,11 +121,11 @@ io.on('connection', (socket) => {
 });
 
 // start listening for requests
-http.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     console.info(`listening on *:${PORT}`);
 });
 
-// Copied from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
+// copied from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
 function getRandomIntInclusive(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
@@ -212,3 +206,12 @@ function emitGameStateDone() {
         player2Score: getPlayerScore(2)
     });
 }
+
+console.info(`
+ _____ _     _     ___     ____                   _ _
+|_   _| |__ (_)___|_ _|___|  _ \\ ___  _ __   __ _| | |
+  | | | '_ \\| / __ | |/ __| |_) / _ \\| '_ \\ / _\` | | |
+  | | | | | | \\__  | |\\__ |  __| (_) | | | | (_| |_|_|
+  |_| |_| |_|_|___|___|___|_|   \\___/|_| |_|\\__, (_(_)
+                                            |___/
+`);

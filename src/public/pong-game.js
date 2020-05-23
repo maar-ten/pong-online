@@ -197,6 +197,11 @@ function processGameStateMessage(data) {
   ball.setVelocity(0, 0);
 
   switch (data.state) {
+    case GAME_STATE.WAIT:
+      playerNumber = data.number;
+      localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
+      break;
+
     case GAME_STATE.START:
       playerNumber = data.number;
       texts.setPlayer1Score(data.player1Score);

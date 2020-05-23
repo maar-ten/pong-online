@@ -47,7 +47,8 @@ io.on(MESSAGE.CONNECTION, (socket) => {
     if (players.length === 1) {
         // wait for the other player
         socket.emit(MESSAGE.GAME_STATE, {
-            state: GAME_STATE.WAIT
+            state: GAME_STATE.WAIT,
+            number: player.number
         });
     } else {
         // both players connected, but not ready yet

@@ -1,7 +1,7 @@
+import cfg from './config.js';
+
 const PADDLE_WIDTH = 15;
 const PADDLE_HEIGHT = 80;
-
-export const PADDLE_SPEED = 600;
 
 export default class Paddle extends Phaser.GameObjects.Rectangle {
     dy = 0;
@@ -20,12 +20,12 @@ export default class Paddle extends Phaser.GameObjects.Rectangle {
     }
 
     up() {
-        this.dy = -PADDLE_SPEED;
+        this.dy = -cfg.PADDLE_SPEED;
         this.update();
     }
 
     down() {
-        this.dy = PADDLE_SPEED;
+        this.dy = cfg.PADDLE_SPEED;
         this.update();
     }
 }

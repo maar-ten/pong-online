@@ -6,18 +6,18 @@
  * For more information see: https://nodejs.org/api/esm.html#esm_ecmascript_modules.
  */
 
-import express from  'express';
+import express from 'express';
 import http from 'http';
 import socketio from 'socket.io';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import {fileURLToPath} from 'url';
+import {dirname, join} from 'path';
 
-import { GAME_ACTION, GAME_STATE, MESSAGE } from './public/constants.js';
+import {GAME_ACTION, GAME_STATE, MESSAGE} from './public/constants.js';
 import cfg from './public/config.js';
 
 const app = express();
 const httpServer = http.createServer(app);
-const io  = socketio(httpServer);
+const io = socketio(httpServer);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = 3000;
 const players = [];
@@ -59,12 +59,18 @@ io.on(MESSAGE.CONNECTION, (socket) => {
 
     socket.on(MESSAGE.READY, (data) => {
         getPlayerByNumber(data.player).ready = data.ready;
-        let readyPlayers = players.filter(player => player.ready === true).length;
+        const readyPlayers = players.filter(player => player.ready === true).length;
         if (readyPlayers === 2) {
             // both players are ready.
             console.info('Both players are ready. Changing state to serve');
-            let servingPlayer = getRandomIntInclusive(1, 2);
-            players.forEach(player => player.score = 0); // reset scores
+
+            // reset scores and ready state
+            players.forEach(player => {
+                player.score = 0;
+                player.ready = false;
+            });
+
+            const servingPlayer = getRandomIntInclusive(1, 2);
             emitGameStateServe(servingPlayer);
         }
     });
@@ -82,7 +88,7 @@ io.on(MESSAGE.CONNECTION, (socket) => {
             player.ready = false;
             //todo would be nice to keep the scores in case the other player left by accident
             player.score = 0;
-            socket.broadcast.emit(MESSAGE.GAME_STATE, { state: GAME_STATE.DISCONNECT });
+            socket.broadcast.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.DISCONNECT});
         });
     });
 
@@ -150,15 +156,14 @@ function getNextPlayerNumber() {
 }
 
 function getServingAngle(playerNumber) {
-    let direction = playerNumber === 1 ? 0 : 180;
-    let degrees = getRandomIntInclusive(-45, 45) + direction;
+    const direction = playerNumber === 1 ? 0 : 180;
+    const degrees = getRandomIntInclusive(-45, 45) + direction;
     return degrees / 180 * Math.PI; // conversion from degrees to radians: 180 DEG = PI radians
 }
 
 function getAngleChange(currentAngle) {
-    // todo check that the new angle will not be too steep
-    let angleChange = getRandomIntInclusive(0, 30) / 100; // 0 - 30 is between 0 - 17 degrees
-    let direction = getRandomIntInclusive(0, 1) === 1 ? 1 : -1;
+    const angleChange = getRandomIntInclusive(0, 30) / 100; // 0 - 30 is between 0 - 17 degrees
+    const direction = getRandomIntInclusive(0, 1) === 1 ? 1 : -1;
     return angleChange * direction;
 }
 

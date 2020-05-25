@@ -1,4 +1,5 @@
 import { GAME_STATE } from './constants.js';
+import cfg from './config.js';
 
 const FONT = 'PressStart2P';
 
@@ -9,14 +10,6 @@ export default class Texts {
         this.subtitle = addText(scene, screenCenterX, screenHeight / 10 + 48, 16, 'Press Enter to Play!');
         this.player1ScoreText = addText(scene, screenCenterX - 100, screenHeight / 3, 56, 0);
         this.player2ScoreText = addText(scene, screenCenterX + 100, screenHeight / 3, 56, 0);
-    }
-
-    setTitle(text) {
-        this.title.text = text;
-    }
-
-    setSubtitle(text) {
-        this.subtitle.text = text;
     }
 
     setPlayer1Score(score) {
@@ -78,7 +71,7 @@ export default class Texts {
                 break;
 
             case GAME_STATE.DONE:
-                const winner = this.player1ScoreText === '10' ? 1 : 2;
+                const winner = this.player1ScoreText === `${cfg.GAME_LENGTH}` ? 1 : 2;
                 const text = winner === playerNumber ? 'Win' : 'Lose'
                 this.title.text = `You ${text}!`;
                 this.subtitle.text = 'Press Enter to Play!';

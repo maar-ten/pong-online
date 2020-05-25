@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 import { GAME_ACTION, GAME_STATE, MESSAGE } from './public/constants.js';
+import cfg from './public/config.js';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -98,7 +99,7 @@ io.on(MESSAGE.CONNECTION, (socket) => {
 
             case GAME_ACTION.SCORE:
                 addPoint(action.player);
-                if (getPlayerByNumber(action.player).score === 10) {
+                if (getPlayerByNumber(action.player).score === cfg.GAME_LENGTH) {
                     emitGameStateDone();
                 } else {
                     let nextServer = action.player === 2 ? 1 : 2;

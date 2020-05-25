@@ -10,8 +10,8 @@ export default class Ball extends Phaser.GameObjects.Rectangle {
         this.body.onWorldBounds = true;
         this.body.setBounce(1);
         this.setOrigin(.5);
-        this.xOrigin = x;
-        this.yOrigin = y;
+        this.xOrigin = this.x;
+        this.yOrigin = this.y;
         this.angleChanges = [];
     }
 

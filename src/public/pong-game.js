@@ -1,7 +1,7 @@
-import Texts, { addText } from './texts.js';
+import Texts, {addText} from './texts.js';
 import Paddle from './paddle.js';
 import Ball from './ball.js';
-import { GAME_STATE, GAME_ACTION, MESSAGE } from './constants.js';
+import {GAME_ACTION, GAME_STATE, MESSAGE} from './constants.js';
 import cfg from './config.js';
 
 // open the communications channel
@@ -34,6 +34,7 @@ let keys; // key bindings
 
 // game state variables
 let gameState = GAME_STATE.CONNECT;
+let gameTime;
 let previousGameState;
 let playerNumber;
 let servingPlayer;
@@ -50,18 +51,18 @@ const LOCAL_PADDLE_FRAMES_THRESHOLD = 1; // the amount of frames that dy must li
 
 // frame rate
 const FPS_FRAMES_THRESHOLD = 180; // average the fps calculation over this amount of frames
-let fpsTime = Date.now();
+let fpsTime = 0;
 let fpsCount = 0;
 
 // messages rate (message per second)
 const MPS_TIME_THRESHOLD = 3000 // average the mps calculation over this amount of milliseconds
-let mpsTime = Date.now();
+let mpsTime = 0;
 let mpsCount = 0;
 
 // network latency (milliseconds)
 const LAT_COUNT_THRESHOLD = 3 // average the latency calculation over this amount of measurements
 const LAT_INTERVAL = 1; // number of seconds between latency measurements
-let latTime = Date.now();
+let latTime = 0;
 let latTotal = 0;
 let latCount = 0;
 
@@ -132,7 +133,8 @@ function create() {
 }
 
 //-- Called by the game engine for every frame drawn to the screen
-function update() {
+function update(time) {
+  gameTime = time;
 
   updateBallStatus();
   updateLocalPaddle();
@@ -326,25 +328,24 @@ function updateFps() {
   fpsCount++;
 
   if (fpsCount >= FPS_FRAMES_THRESHOLD) {
-    fpsText.text = 'FPS ' + Math.round(fpsCount / (Date.now() - fpsTime) * 1000);
+    fpsText.text = 'FPS ' + Math.round(fpsCount / (gameTime - fpsTime) * 1000);
 
     // reset state
     fpsCount = 0;
-    fpsTime = Date.now();
+    fpsTime = gameTime;
   }
 }
 
 // The MPS (messages per second) displayed is averaged over a number of frames to make it less jittery
 function updateMps() {
-  const now = Date.now();
-  const timeDiff = now - mpsTime;
+  const timeDiff = gameTime - mpsTime;
 
   if (timeDiff >= MPS_TIME_THRESHOLD) {
     const averageMsgCount = Math.round(mpsCount / timeDiff * 1000);
     mpsText.text = 'MPS ' + averageMsgCount;
 
     // reset counters
-    mpsTime = now;
+    mpsTime = gameTime;
     mpsCount = 0;
   }
 }
@@ -354,14 +355,13 @@ function updateLat() {
 
   // update the latency report when the threshold expires
   if (latCount >= LAT_COUNT_THRESHOLD) {
-    latText.text = 'LAT: ' + Math.round(latTotal / latCount);
+    latText.text = 'LAT ' + Math.round(latTotal / latCount);
     latTotal = 0;
     latCount = 0;
   }
 
-  const now = Date.now();
-
   // measure latency when the interval expires
+  const now = Date.now();
   if (now >= latTime + (LAT_INTERVAL * 1000)) {
     emitMessage(MESSAGE.LATENCY, {
       time: now

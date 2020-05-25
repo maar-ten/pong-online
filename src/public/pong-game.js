@@ -42,7 +42,7 @@ let localPaddle;
 let remotePaddle;
 
 const ROBOTIC_PLAYER_NUMBER = 2;
-let roboticTimeoutFrames = 0;
+let roboticTimeoutFrameCount = 0;
 
 let localPaddleFrames = 0;
 let localPaddlePreviousY;
@@ -173,11 +173,9 @@ function updateLocalPaddle() {
     // react to keyboard presses
     if (keys.UP.isDown || keys.W.isDown) {
       localPaddle.body.setVelocityY(-cfg.PADDLE_SPEED);
-    }
-    else if (keys.DOWN.isDown || keys.S.isDown) {
+    } else if (keys.DOWN.isDown || keys.S.isDown) {
       localPaddle.body.setVelocityY(cfg.PADDLE_SPEED);
-    }
-    else {
+    } else {
       localPaddle.body.setVelocityY(0);
     }
 
@@ -268,7 +266,7 @@ function handleRemoteActionMessage(data) {
 
 /**
  * Emits the current paddle position when it has changed by a significant amount.
- * 
+ *
  * Amount of change can be configured by changing the thresholds: LOCAL_PADDLE_FRAMES_THRESHOLD and LOCAL_PADDLE_Y_THRESHOLD
  */
 function emitPaddleMoved() {
@@ -391,17 +389,18 @@ function updateRobot() {
       break;
 
     case GAME_STATE.SERVE:
-      roboticTimeoutFrames++;
+      if (playerNumber === servingPlayer) {
+        roboticTimeoutFrameCount++;
 
-      // the robot serves with a little delay
-      if (playerNumber === servingPlayer && roboticTimeoutFrames >= 100) {
-        emitMessage(MESSAGE.ACTION, {
-          action: GAME_ACTION.SERVE,
-          player: playerNumber,
-        });
-        roboticTimeoutFrames = 0;
+        // the robot serves with a little delay
+        if (roboticTimeoutFrameCount >= 100) {
+          emitMessage(MESSAGE.ACTION, {
+            action: GAME_ACTION.SERVE,
+            player: playerNumber,
+          });
+          roboticTimeoutFrameCount = 0;
+        }
+        break;
       }
-
-      break;
   }
 }

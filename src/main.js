@@ -34,7 +34,7 @@ io.on(MESSAGE.CONNECTION, (socket) => {
   // deny new players when the maximum number of players is exceeded
   if (players.length === 2) {
     console.info('Maximum amount of players exceeded. Disconnecting new player.');
-    socket.emit(MESSAGE.GAME_STATE, { state: GAME_STATE.SERVER_REJECT });
+    socket.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.SERVER_REJECT});
     socket.disconnect(true);
     return;
   }
@@ -44,13 +44,10 @@ io.on(MESSAGE.CONNECTION, (socket) => {
   console.info(`Player ${playerNumber} connected`);
 
   if (players.length === 1) {
-    // wait for the other player
-    socket.emit(MESSAGE.GAME_STATE, {
-      state: GAME_STATE.WAIT,
-      number: playerNumber
-    });
+    // one player connected, wait for the other one
+    emitGameStateWait(socket, playerNumber);
   } else {
-    // both players connected, but not ready yet
+    // both players connected, ask if they are ready to start
     console.info('Both players connected. Changing state to start');
     emitGameStateStart();
   }
@@ -193,6 +190,13 @@ function getPlayerByNumber(number) {
 
 function getPlayerScore(number) {
   return players.find(player => player.number === number).score;
+}
+
+function emitGameStateWait(socket, playerNumber) {
+  socket.emit(MESSAGE.GAME_STATE, {
+    state: GAME_STATE.WAIT,
+    number: playerNumber
+  });
 }
 
 function emitGameStateStart() {

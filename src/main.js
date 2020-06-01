@@ -33,9 +33,7 @@ io.on(MESSAGE.CONNECTION, (socket) => {
 
   // deny new players when the maximum number of players is exceeded
   if (players.length === 2) {
-    console.info('Maximum amount of players exceeded. Disconnecting new player.');
-    socket.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.SERVER_REJECT});
-    socket.disconnect(true);
+    rejectPlayer(socket);
     return;
   }
 
@@ -69,6 +67,13 @@ function addPlayerToSession(socketId) {
   players.push(player);
 
   return player.number;
+}
+
+// Gracefully reject a player
+function rejectPlayer(socket) {
+  console.info('Maximum amount of players exceeded. Disconnecting new player.');
+  socket.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.SERVER_REJECT});
+  socket.disconnect(true);
 }
 
 // When 2 players are ready the game state changes to serve

@@ -20,7 +20,11 @@ const httpServer = http.createServer(app);
 const io = socketio(httpServer);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = 3000;
+
+// game state variables
 const players = [];
+let paddleHits = 0;
+let flightData = [];
 
 // serve static game files from public folder
 app.use(express.static(join(__dirname, 'public')));
@@ -50,6 +54,7 @@ io.on(MESSAGE.CONNECTION, (socket) => {
     emitGameStateStart();
   }
 
+  // configure web socket events
   socket.on(MESSAGE.READY, handlePlayerReady);
   socket.on(MESSAGE.DISCONNECT, () => handleClientDisconnect(socket));
   socket.on(MESSAGE.ACTION, (data) => handleGameAction(socket, data));
@@ -79,10 +84,10 @@ function rejectPlayer(socket) {
 // When 2 players are ready the game state changes to serve
 function handlePlayerReady(data) {
   getPlayerByNumber(data.player).ready = data.ready;
-  const readyPlayers = players.filter(player => player.ready === true).length;
-  if (readyPlayers === 2) {
+  if (players.every(player => player.ready)) {
     // both players are ready.
     console.info('Both players are ready. Changing state to serve');
+    flightData = [];
 
     // reset scores and ready state
     players.forEach(player => {
@@ -139,10 +144,26 @@ function handleGameAction(socket, data) {
       break;
 
     case GAME_ACTION.PADDLE_HIT:
-      io.emit(MESSAGE.ACTION, {
-        action: GAME_ACTION.PADDLE_HIT,
-        angleChange: getAngleChange(data.currentAngle)
-      });
+      paddleHits++;
+      flightData.push(data.flightData);
+
+      if (flightData.length === 2) {
+        if (flightData[0].player === flightData[1].player || flightData[0].flightNumber !== flightData[1].flightNumber) {
+          console.log(flightData);
+          console.log('flight data cleared');
+          flightData = [];
+        }
+      }
+
+      if (paddleHits === 2) {
+        io.emit(MESSAGE.ACTION, {
+          action: GAME_ACTION.PADDLE_HIT,
+          angleChange: getAngleChange(data.currentAngle),
+          flightData: flightData
+        });
+        paddleHits = 0;
+        flightData = [];
+      }
       break;
   }
 }
@@ -177,24 +198,20 @@ function getAngleChange(currentAngle) {
   return angleChange * direction;
 }
 
-function addPoint(playerNumber) {
-  players.forEach(player => {
-    if (player.number === playerNumber) {
-      player.score++;
-    }
-  });
+function addPoint(player) {
+  getPlayerByNumber(player).score++;
 }
 
 function getPlayerById(id) {
   return players.find(player => player.id === id);
 }
 
-function getPlayerByNumber(number) {
-  return players.find(player => player.number === number);
+function getPlayerScore(number) {
+  return getPlayerByNumber(number).score;
 }
 
-function getPlayerScore(number) {
-  return players.find(player => player.number === number).score;
+function getPlayerByNumber(number) {
+  return players.find(player => player.number === number);
 }
 
 function emitGameStateWait(socket, playerNumber) {

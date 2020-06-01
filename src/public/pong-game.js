@@ -41,6 +41,12 @@ let servingPlayer;
 let localPaddle;
 let remotePaddle;
 
+let paddleHits = 0;
+let paddleHitTime = 0;
+let flightTimeDifference = 0;
+let flightTimeCorrected = false;
+const FLIGHT_TIME_DIFF_THRESHOLD = 50;
+
 const ROBOTIC_PLAYER_NUMBER = 2;
 let roboticTimeoutFrameCount = 0;
 
@@ -136,7 +142,7 @@ function create() {
 function update(time) {
   gameTime = time;
 
-  updateBallStatus();
+  updateBallStatus(this);
   updateLocalPaddle();
   updateEnterKeyState();
 
@@ -153,8 +159,23 @@ function update(time) {
   if (cfg.PERF_MON) updateStats();
 }
 
-// Registers when one of the players scores a point
-function updateBallStatus() {
+// Registers ball flight sync issues and when one of the players scores a point
+function updateBallStatus(scene) {
+  // Correct flight time differences between the players by slowing down the fastest one
+  if (flightTimeDifference > FLIGHT_TIME_DIFF_THRESHOLD && !flightTimeCorrected) {
+    scene.physics.pause();
+    scene.time.addEvent({
+      delay: FLIGHT_TIME_DIFF_THRESHOLD * 2,
+      callback: () => {
+        scene.physics.resume();
+        console.log('flight corrected');
+      },
+      callbackScope: scene
+    });
+    flightTimeCorrected = true;
+  }
+
+  // Register ball leaving the playing area
   if (gameState === GAME_STATE.PLAY) {
     // ball exits to the right (player 1 scores)
     if (playerNumber === 1 && ball.x - ball.width / 2 > cfg.GAME_WIDTH) {
@@ -206,7 +227,7 @@ function updateEnterKeyState() {
   }
 }
 
-// Handle game state changes coming from the server
+// Handle game state changes from the server
 function handleGameStateMessage(data) {
   previousGameState = gameState;
   gameState = data.state;
@@ -229,6 +250,8 @@ function handleGameStateMessage(data) {
       break;
 
     case GAME_STATE.PLAY:
+      paddleHits = 0;
+      paddleHitTime = 0;
       ball.setVelocity(data.ballVelocity, data.ballAngle);
       break;
 
@@ -244,12 +267,13 @@ function handleGameStateMessage(data) {
     texts.setPlayer2Score(data.player2Score);
     localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
     remotePaddle = playerNumber === 2 ? paddleLeft : paddleRight;
+    document.getElementsByTagName('title')[0].innerText = `This is Pong - Player ${playerNumber}`;
 
     localPaddlePreviousY = localPaddle.y;
   }
 }
 
-// Handle incoming action messages from the other player
+// Handle incoming action messages from the server
 function handleRemoteActionMessage(data) {
   mpsCount++;
 
@@ -260,6 +284,20 @@ function handleRemoteActionMessage(data) {
 
     case GAME_ACTION.PADDLE_HIT:
       ball.setAngleChange(data.angleChange);
+
+      const localFlight = data.flightData.find(flight => flight.player === playerNumber);
+      const remoteFlight = data.flightData.find(flight => flight.player !== playerNumber);
+
+      if (localFlight && remoteFlight) {
+        if (localFlight.flightCorrected || remoteFlight.flightCorrected) {
+          flightTimeCorrected = false;
+          flightTimeDifference = 0;
+        } else {
+          flightTimeDifference += remoteFlight.flightTime - localFlight.flightTime;
+        }
+        console.log(flightTimeDifference);
+      }
+
       break;
   }
 }
@@ -284,9 +322,19 @@ function emitPaddleMoved() {
 }
 
 function emitPaddleHit() {
+  paddleHits++;
+  const flightTime = paddleHitTime === 0 ? 0 : gameTime - paddleHitTime;
+  paddleHitTime = gameTime;
+
   emitMessage(MESSAGE.ACTION, {
     action: GAME_ACTION.PADDLE_HIT,
-    currentAngle: ball.body.velocity.angle()
+    currentAngle: ball.body.velocity.angle(),
+    flightData: {
+      player: playerNumber,
+      flightNumber: paddleHits,
+      flightTime: flightTime,
+      flightCorrected: flightTimeCorrected
+    }
   });
 }
 
@@ -302,7 +350,7 @@ function emitPlayerReady(playerNumber) {
 function playerScored(playerNumber) {
   emitMessage(MESSAGE.ACTION, {
     action: GAME_ACTION.SCORE,
-    player: playerNumber,
+    player: playerNumber
   });
   ballOutSound.play();
   ball.reset();
@@ -396,7 +444,7 @@ function updateRobot() {
         if (roboticTimeoutFrameCount >= 100) {
           emitMessage(MESSAGE.ACTION, {
             action: GAME_ACTION.SERVE,
-            player: playerNumber,
+            player: playerNumber
           });
           roboticTimeoutFrameCount = 0;
         }

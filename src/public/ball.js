@@ -39,7 +39,8 @@ export default class Ball extends Phaser.GameObjects.Rectangle {
 
                 // slightly change angle
                 const angle = this.body.velocity.angle();
-                this.body.velocity.setAngle(angle + this.angleChanges.shift());
+                const angleChange = this.angleChanges.shift();
+                this.body.velocity.setAngle(angle + angleChange ? angleChange : 0);
 
                 // report back to get a new angle
                 this.collisionCallbackFn();

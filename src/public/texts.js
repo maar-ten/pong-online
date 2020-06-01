@@ -29,6 +29,13 @@ export default class Texts {
                 this.subtitle.visible = true;
                 break;
 
+            case GAME_STATE.SERVER_REJECT:
+                this.title.text = 'This is Pong!';
+                this.subtitle.text = 'No more room on server';
+                this.title.visible = true;
+                this.subtitle.visible = true;
+                break;
+
             case GAME_STATE.WAIT:
             case GAME_STATE.DISCONNECT:
                 this.title.text = 'This is Pong!';

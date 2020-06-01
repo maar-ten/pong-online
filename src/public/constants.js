@@ -1,6 +1,7 @@
 export const GAME_STATE = {
     CONNECT: 'connect',
     DISCONNECT: 'disconnect',
+    SERVER_REJECT: 'server-reject',
     WAIT: 'wait',
     START: 'start',
     START_SERVE: 'start-serve',
@@ -21,8 +22,8 @@ export const MESSAGE = {
     GAME_STATE: 'game-state',
     ACTION: 'action',
     READY: 'ready',
-    CONNECT_ERROR: 'connect_error',
     CONNECTION: 'connection',
+    CONNECT_ERROR: 'connect_error',
     DISCONNECT: 'disconnect',
     LATENCY: 'latency'
 }

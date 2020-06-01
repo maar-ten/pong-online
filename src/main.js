@@ -25,197 +25,205 @@ const players = [];
 // serve static game files from public folder
 app.use(express.static(join(__dirname, 'public')));
 
+// start listening for requests
+httpServer.listen(PORT, () => console.info(`Server online and listening on *:${PORT}`));
+
 // configure web socket connections
 io.on(MESSAGE.CONNECTION, (socket) => {
 
-    // deny new players when the maximum number of players is exceeded
-    if (players.length === 2) {
-        console.info('Maximum amount of players exceeded. Disconnecting new player.');
-        socket.disconnect(true);
-        return;
-    }
+  // deny new players when the maximum number of players is exceeded
+  if (players.length === 2) {
+    console.info('Maximum amount of players exceeded. Disconnecting new player.');
+    socket.emit(MESSAGE.GAME_STATE, { state: GAME_STATE.SERVER_REJECT });
+    socket.disconnect(true);
+    return;
+  }
 
-    // create a new player and assign the player number
-    const player = {};
-    player.id = socket.id;
-    player.number = getNextPlayerNumber();
-    player.score = 0;
+  // add a new player to the session
+  const playerNumber = addPlayerToSession(socket.id);
+  console.info(`Player ${playerNumber} connected`);
+
+  if (players.length === 1) {
+    // wait for the other player
+    socket.emit(MESSAGE.GAME_STATE, {
+      state: GAME_STATE.WAIT,
+      number: playerNumber
+    });
+  } else {
+    // both players connected, but not ready yet
+    console.info('Both players connected. Changing state to start');
+    emitGameStateStart();
+  }
+
+  socket.on(MESSAGE.READY, handlePlayerReady);
+  socket.on(MESSAGE.DISCONNECT, () => handleClientDisconnect(socket));
+  socket.on(MESSAGE.ACTION, (data) => handleGameAction(socket, data));
+  socket.on(MESSAGE.LATENCY, (data) => socket.emit(MESSAGE.LATENCY, data));
+});
+
+// Create and add a new player to the session
+function addPlayerToSession(socketId) {
+  const player = {};
+  player.id = socketId;
+  player.number = getNextPlayerNumber();
+  player.score = 0;
+  player.ready = false;
+
+  players.push(player);
+
+  return player.number;
+}
+
+// When 2 players are ready the game state changes to serve
+function handlePlayerReady(data) {
+  getPlayerByNumber(data.player).ready = data.ready;
+  const readyPlayers = players.filter(player => player.ready === true).length;
+  if (readyPlayers === 2) {
+    // both players are ready.
+    console.info('Both players are ready. Changing state to serve');
+
+    // reset scores and ready state
+    players.forEach(player => {
+      player.score = 0;
+      player.ready = false;
+    });
+
+    const servingPlayer = getRandomIntInclusive(1, 2);
+    emitGameStateServe(servingPlayer);
+  }
+}
+
+// When a client disconnects the other client is notified
+function handleClientDisconnect(socket) {
+  // delete player when their client disconnects
+  const player = getPlayerById(socket.id);
+  if (player) {
+    console.info(`Player ${player.number} disconnected`);
+    players.splice(players.indexOf(player), 1); // delete the player
+  }
+
+  // reset remaining player
+  players.forEach(player => {
     player.ready = false;
-    players.push(player);
+    //todo would be nice to keep the scores in case the other player left by accident
+    player.score = 0;
+    socket.broadcast.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.DISCONNECT});
+  });
+}
 
-    console.info(`Player ${player.number} connected`);
+function handleGameAction(socket, data) {
+  switch (data.action) {
+    case GAME_ACTION.SERVE:
+      io.emit(MESSAGE.GAME_STATE, {
+        state: GAME_STATE.PLAY,
+        ballVelocity: 500,
+        ballAngle: getServingAngle(data.player)
+      });
+      break;
 
-    if (players.length === 1) {
-        // wait for the other player
-        socket.emit(MESSAGE.GAME_STATE, {
-            state: GAME_STATE.WAIT,
-            number: player.number
-        });
-    } else {
-        // both players connected, but not ready yet
-        console.info('Both players connected. Changing state to start');
-        emitGameStateStart();
-    }
+    case GAME_ACTION.SCORE:
+      addPoint(data.player);
+      if (getPlayerByNumber(data.player).score === cfg.GAME_LENGTH) {
+        emitGameStateDone();
+      } else {
+        let nextServer = data.player === 2 ? 1 : 2;
+        emitGameStateServe(nextServer);
+      }
+      break;
 
-    socket.on(MESSAGE.READY, (data) => {
-        getPlayerByNumber(data.player).ready = data.ready;
-        const readyPlayers = players.filter(player => player.ready === true).length;
-        if (readyPlayers === 2) {
-            // both players are ready.
-            console.info('Both players are ready. Changing state to serve');
+    case GAME_ACTION.PADDLE_MOVE:
+      // send to all clients except the sender
+      socket.broadcast.emit(MESSAGE.ACTION, data);
+      break;
 
-            // reset scores and ready state
-            players.forEach(player => {
-                player.score = 0;
-                player.ready = false;
-            });
-
-            const servingPlayer = getRandomIntInclusive(1, 2);
-            emitGameStateServe(servingPlayer);
-        }
-    });
-
-    socket.on(MESSAGE.DISCONNECT, () => {
-        // delete player when their client disconnects
-        const player = getPlayerById(socket.id);
-        if (player) {
-            console.info(`Player ${player.number} disconnected`);
-            players.splice(players.indexOf(player), 1); // delete the player
-        }
-
-        // reset remaining player
-        players.forEach(player => {
-            player.ready = false;
-            //todo would be nice to keep the scores in case the other player left by accident
-            player.score = 0;
-            socket.broadcast.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.DISCONNECT});
-        });
-    });
-
-    // receive and broadcast actions
-    socket.on(MESSAGE.ACTION, (action) => {
-        switch (action.action) {
-            case GAME_ACTION.SERVE:
-                io.emit(MESSAGE.GAME_STATE, {
-                    state: GAME_STATE.PLAY,
-                    ballVelocity: 500,
-                    ballAngle: getServingAngle(action.player)
-                });
-                break;
-
-            case GAME_ACTION.SCORE:
-                addPoint(action.player);
-                if (getPlayerByNumber(action.player).score === cfg.GAME_LENGTH) {
-                    emitGameStateDone();
-                } else {
-                    let nextServer = action.player === 2 ? 1 : 2;
-                    emitGameStateServe(nextServer);
-                }
-                break;
-
-            case GAME_ACTION.PADDLE_MOVE:
-                // send to all clients except the sender
-                socket.broadcast.emit(MESSAGE.ACTION, action);
-                break;
-
-            case GAME_ACTION.PADDLE_HIT:
-                io.emit(MESSAGE.ACTION, {
-                    action: GAME_ACTION.PADDLE_HIT,
-                    angleChange: getAngleChange(action.currentAngle)
-                });
-                break;
-        }
-    });
-
-    socket.on(MESSAGE.LATENCY, (data) => {
-        socket.emit(MESSAGE.LATENCY, data);
-    });
-});
-
-// start listening for requests
-httpServer.listen(PORT, () => {
-    console.info(`Server online and listening on *:${PORT}`);
-});
+    case GAME_ACTION.PADDLE_HIT:
+      io.emit(MESSAGE.ACTION, {
+        action: GAME_ACTION.PADDLE_HIT,
+        angleChange: getAngleChange(data.currentAngle)
+      });
+      break;
+  }
+}
 
 // copied from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
 function getRandomIntInclusive(min, max) {
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive 
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive
 
-    //todo perhaps use a better randomizer?
+  //todo perhaps use a better randomizer?
 }
 
 function getNextPlayerNumber() {
-    if (players.length === 0) {
-        return 1;
-    } else {
-        let numberAlreadyTaken = players[0].number;
-        return numberAlreadyTaken === 2 ? 1 : 2;
-    }
+  if (players.length === 0) {
+    return 1;
+  } else {
+    let numberAlreadyTaken = players[0].number;
+    return numberAlreadyTaken === 2 ? 1 : 2;
+  }
 }
 
 function getServingAngle(playerNumber) {
-    const direction = playerNumber === 1 ? 0 : 180;
-    const degrees = getRandomIntInclusive(-45, 45) + direction;
-    return degrees / 180 * Math.PI; // conversion from degrees to radians: 180 DEG = PI radians
+  const direction = playerNumber === 1 ? 0 : 180;
+  const degrees = getRandomIntInclusive(-45, 45) + direction;
+  return degrees / 180 * Math.PI; // conversion from degrees to radians: 180 DEG = PI radians
 }
 
 function getAngleChange(currentAngle) {
-    const angleChange = getRandomIntInclusive(0, 30) / 100; // 0 - 30 is between 0 - 17 degrees
-    const direction = getRandomIntInclusive(0, 1) === 1 ? 1 : -1;
-    return angleChange * direction;
+  const angleChange = getRandomIntInclusive(0, 30) / 100; // 0 - 30 is between 0 - 17 degrees
+  const direction = getRandomIntInclusive(0, 1) === 1 ? 1 : -1;
+  return angleChange * direction;
 }
 
 function addPoint(playerNumber) {
-    players.forEach(player => {
-        if (player.number === playerNumber) {
-            player.score++;
-        }
-    });
+  players.forEach(player => {
+    if (player.number === playerNumber) {
+      player.score++;
+    }
+  });
 }
 
 function getPlayerById(id) {
-    return players.find(player => player.id === id);
+  return players.find(player => player.id === id);
 }
 
 function getPlayerByNumber(number) {
-    return players.find(player => player.number === number);
+  return players.find(player => player.number === number);
 }
 
 function getPlayerScore(number) {
-    return players.find(player => player.number === number).score;
+  return players.find(player => player.number === number).score;
 }
 
 function emitGameStateStart() {
-    players.forEach(player => {
-        io.to(player.id).emit(MESSAGE.GAME_STATE, {
-            state: GAME_STATE.START,
-            number: player.number,
-            player1Score: getPlayerScore(1),
-            player2Score: getPlayerScore(2)
-        });
+  players.forEach(player => {
+    io.to(player.id).emit(MESSAGE.GAME_STATE, {
+      state: GAME_STATE.START,
+      number: player.number,
+      player1Score: getPlayerScore(1),
+      player2Score: getPlayerScore(2)
     });
+  });
 }
 
 function emitGameStateServe(server) {
-    players.forEach(player => {
-        io.to(player.id).emit(MESSAGE.GAME_STATE, {
-            state: GAME_STATE.SERVE,
-            number: player.number,
-            server: server,
-            player1Score: getPlayerScore(1),
-            player2Score: getPlayerScore(2)
-        });
+  players.forEach(player => {
+    io.to(player.id).emit(MESSAGE.GAME_STATE, {
+      state: GAME_STATE.SERVE,
+      number: player.number,
+      server: server,
+      player1Score: getPlayerScore(1),
+      player2Score: getPlayerScore(2)
     });
+  });
 }
 
 function emitGameStateDone() {
-    io.emit(MESSAGE.GAME_STATE, {
-        state: GAME_STATE.DONE,
-        player1Score: getPlayerScore(1),
-        player2Score: getPlayerScore(2)
-    });
+  io.emit(MESSAGE.GAME_STATE, {
+    state: GAME_STATE.DONE,
+    player1Score: getPlayerScore(1),
+    player2Score: getPlayerScore(2)
+  });
 }
 
 // remember to escape backslashes

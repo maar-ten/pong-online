@@ -29,6 +29,16 @@ let flightData = [];
 // serve static game files from public folder
 app.use(express.static(join(__dirname, 'public')));
 
+// configure reset url
+app.get('/pung', (req, res) => {
+  players.forEach(player => io.sockets.connected[player.id].disconnect());
+  players.splice(0);
+  flightData = [];
+
+  console.info('Killed game session and server connections');
+  res.send('Killed game session and server connections');
+});
+
 // start listening for requests
 httpServer.listen(PORT, () => console.info(`Server online and listening on *:${PORT}`));
 

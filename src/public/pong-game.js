@@ -27,10 +27,10 @@ new Phaser.Game({
 });
 
 // assets
+let paddleLeft, paddleRight, ball;    // sprites
+let wallHitSound, ballOutSound;       // sounds
 let texts, fpsText, mpsText, latText; // texts
-let paddleLeft, paddleRight, ball; // moving parts
-let wallHitSound, ballOutSound; // sounds
-let keys; // key bindings
+let keys;                             // key bindings
 
 // game state variables
 let gameState = GAME_STATE.CONNECT;
@@ -77,6 +77,11 @@ function preload() {
   // set background color
   this.cameras.main.backgroundColor.setTo(40, 45, 52, 255);
 
+  // images
+  this.load.image('ball', 'assets/ball.png');
+  this.load.image('paddle-left', 'assets/paddle-left.png');
+  this.load.image('paddle-right', 'assets/paddle-right.png');
+
   // sounds
   this.load.audio('paddle-hit', 'assets/paddle-hit.mp3');
   this.load.audio('wall-hit', 'assets/wall-hit.mp3');
@@ -96,12 +101,12 @@ function create() {
   texts = new Texts(this, cfg.GAME_HEIGHT, screenCenterX);
 
   // create paddles
-  paddleLeft = new Paddle(this, 30, 120);
-  paddleRight = new Paddle(this, cfg.GAME_WIDTH - 30, cfg.GAME_HEIGHT - 120);
+  paddleLeft = new Paddle(this, 30, 120, 'paddle-left');
+  paddleRight = new Paddle(this, cfg.GAME_WIDTH - 30, cfg.GAME_HEIGHT - 120, 'paddle-right');
 
   // create ball and add the paddles as colliders
   const paddleHitSound = this.sound.add('paddle-hit');
-  ball = new Ball(this, screenCenterX, screenCenterY);
+  ball = new Ball(this, screenCenterX, screenCenterY, 'ball');
   ball.addCollider(paddleLeft, paddleHitSound, emitPaddleHit);
   ball.addCollider(paddleRight, paddleHitSound, emitPaddleHit);
 
@@ -168,7 +173,6 @@ function updateBallStatus(scene) {
       delay: FLIGHT_TIME_DIFF_THRESHOLD * 2,
       callback: () => {
         scene.physics.resume();
-        console.log('flight corrected');
       },
       callbackScope: scene
     });
@@ -295,7 +299,6 @@ function handleRemoteActionMessage(data) {
         } else {
           flightTimeDifference += remoteFlight.flightTime - localFlight.flightTime;
         }
-        console.log(flightTimeDifference);
       }
 
       break;

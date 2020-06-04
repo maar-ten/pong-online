@@ -1,15 +1,17 @@
-const BALL_SIZE = 16;
+const BALL_SIZE = 20;
 
-export default class Ball extends Phaser.GameObjects.Rectangle {
+export default class Ball extends Phaser.GameObjects.Image {
 
-    constructor(scene, x, y) {
-        super(scene, x, y, BALL_SIZE, BALL_SIZE, 0XFFFFFF);
+    constructor(scene, x, y, texture) {
+        super(scene, x, y, texture);
         scene.add.existing(this);
         this.scene.physics.add.existing(this);
         this.body.setCollideWorldBounds(true);
         this.body.onWorldBounds = true;
+        this.body.setCircle(this.width / 2, 0, 5);
         this.body.setBounce(1);
         this.setOrigin(.5);
+        this.setDisplaySize(BALL_SIZE, BALL_SIZE);
         this.xOrigin = this.x;
         this.yOrigin = this.y;
         this.angleChanges = [];

@@ -11,6 +11,7 @@ import http from 'http';
 import socketio from 'socket.io';
 import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
+import crypto from 'crypto';
 
 import {GAME_ACTION, GAME_STATE, MESSAGE} from './public/constants.js';
 import cfg from './public/config.js';
@@ -159,8 +160,6 @@ function handleGameAction(socket, data) {
 
       if (flightData.length === 2) {
         if (flightData[0].player === flightData[1].player || flightData[0].flightNumber !== flightData[1].flightNumber) {
-          console.log(flightData);
-          console.log('flight data cleared');
           flightData = [];
         }
       }
@@ -178,13 +177,13 @@ function handleGameAction(socket, data) {
   }
 }
 
-// copied from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
+// Returns a number between min and max (inclusive)
+// Inspired by: https://stackoverflow.com/questions/18230217/javascript-generate-a-random-number-within-a-range-using-crypto-getrandomvalues#answer-42321673
 function getRandomIntInclusive(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive
-
-  //todo perhaps use a better randomizer?
+  const randomBuffer = new Uint8Array(1);
+  crypto.randomFillSync(randomBuffer);
+  const randomNumber = randomBuffer[0] / (0xff + 1);
+  return Math.floor(randomNumber * (max - min + 1)) + min;
 }
 
 function getNextPlayerNumber() {

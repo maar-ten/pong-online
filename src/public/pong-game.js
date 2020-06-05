@@ -9,6 +9,16 @@ const socket = io();
 
 // Phaser game config
 new Phaser.Game({
+    title: 'This is Pong!',
+    version: 2,
+    banner: {
+        background: [
+            '#D32754',
+            '#2286D8',
+            '#FEA339',
+            '#FD5F3F'
+        ]
+    },
     type: Phaser.AUTO,
     width: cfg.GAME_WIDTH,
     height: cfg.GAME_HEIGHT,

@@ -4,7 +4,7 @@ Pong 🏓
 Pong is a classic video game created in the 70s by [Atari](https://en.wikipedia.org/wiki/Pong). I recreated this game as
 the final project for the CS50 computer science course that I did in 2020.
 
-The goal of this project is to recreate an online multiplayer version of the original Pong game.
+The goal of this project is to create an online multiplayer version of the original Pong game.
 
 Development
 ---
@@ -13,11 +13,12 @@ To help with the development of the game I used a number of freely available res
 - VideoGame2 music by [DL Sounds](https://www.dl-sounds.com/royalty-free/videogame2/) 🤘
 - Sounds created with [Bfxr](https://www.bfxr.net/) 🏆
 - Sounds converted to MP3 with [Convertio](https://convertio.co/)
-- Press Start 2P font by [Codeman38](https://www.fontspace.com/codeman38) 🤩
-- Dead Space font by [DC-designs](https://www.dafont.com/devin-chandra.d8755)
+- Press Start 2P font by [Codeman38](https://www.fontspace.com/codeman38)
+- Dead Space font by [DC-designs](https://www.dafont.com/devin-chandra.d8755) 🤩
 - Lava texture by [Outworldz](https://www.outworldz.com/cgi/free-seamless-textures.plx)
 - Server software [NodeJS](https://nodejs.org/)
 - JavaScript 3rd party libraries as descripted in [package.json](package.json).
+- And I might have used [Stack Overflow](https://stackoverflow.com/questions?tab=Frequent) once or twice 🤣
 
 All this software is free to use and is created by many unsung heroes of the internet 🦸‍♀️ 
 

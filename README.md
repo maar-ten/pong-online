@@ -10,7 +10,7 @@ Development
 ---
 To help with the development of the game I used a number of freely available resources:
 - JavaScript game library [Phaser3](https://phaser.io/) 🦄
-- VideoGame2 music by [DL Sounds](https://www.dl-sounds.com/royalty-free/videogame2/) 🤘
+- Dub Hub music by [Jimmy Fontanez](https://www.youtube.com/watch?reload=9&v=qRZJra5kfGY) 🤘
 - Sounds created with [Bfxr](https://www.bfxr.net/) 🏆
 - Sounds converted to MP3 with [Convertio](https://convertio.co/)
 - Press Start 2P font by [Codeman38](https://www.fontspace.com/codeman38)

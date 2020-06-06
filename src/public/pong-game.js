@@ -97,7 +97,7 @@ function preload() {
     this.load.image('background', 'assets/images/background.png');
 
     // sounds
-    this.load.audio('game-tune', 'assets/audio/Videogame2.mp3');
+    this.load.audio('game-tune', 'assets/audio/Dub_Hub.mp3');
     this.load.audio('paddle-hit', 'assets/audio/paddle-hit.mp3');
     this.load.audio('wall-hit', 'assets/audio/wall-hit.mp3');
     this.load.audio('ball-out', 'assets/audio/ball-out.mp3');

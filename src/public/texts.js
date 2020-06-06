@@ -176,7 +176,7 @@ function getGameResult(paddleHits) {
         result += 'pretty bad';
     }
 
-    return result + ' !';
+    return result;
 }
 
 function tweenScoreBoard(scene, yPos, isDown, duration) {

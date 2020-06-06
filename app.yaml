@@ -1,2 +1,2 @@
 # GoogleCloudPlatform config https://github.com/GoogleCloudPlatform/nodejs-docs-samples/tree/master/appengine/hello-world/standard
-runtime: nodejs
+runtime: nodejs12

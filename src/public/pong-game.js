@@ -307,6 +307,7 @@ function handleGameStateMessage(data) {
         playerNumber = data.number;
         texts.setPlayer1Score(data.player1Score);
         texts.setPlayer2Score(data.player2Score);
+        texts.setPaddleHits(paddleHits);
         localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
         remotePaddle = playerNumber === 2 ? paddleLeft : paddleRight;
         document.getElementsByTagName('title')[0].innerText = `This is Pong - Player ${playerNumber}`;

@@ -4,7 +4,6 @@ import cfg from './config.js';
 const FONT = 'DeadSpace';
 const COLOR = '#FD5F3F';
 
-
 export default class Texts {
 
     constructor(scene, screenHeight, screenCenterX) {
@@ -31,9 +30,14 @@ export default class Texts {
         this.player2ScoreText.text = score;
     }
 
-    setPaddleHits(hits) {
-        this.paddleHits = hits;
+    addPaddleHit() {
+        this.paddleHits++;
         this.paddleHitsMax = Math.max(this.paddleHitsMax, this.paddleHits);
+    }
+
+    resetPaddleHits(newGame) {
+        this.paddleHits = 0;
+        if (newGame) this.paddleHitsMax = 0;
     }
 
     update(gameState, playerNumber, servingPlayer) {
@@ -144,14 +148,26 @@ export function addText(scene, x, y, size, text, fontFamily = FONT, color = COLO
 
 function getGameResult(paddleHits) {
     let result = 'That\'s ';
-    if (paddleHits > 25) {
-        result += 'ridicoulous';
-    } else if (paddleHits > 20) {
+    if (paddleHits >= 21) {
+        result += 'out of this world';
+    } else if (paddleHits === 20) {
+        result += 'ridiculous';
+    } else if (paddleHits === 19) {
+        result += 'surely a mistake';
+    } else if (paddleHits === 18) {
         result += 'crazy';
-    } else if (paddleHits > 18) {
+    } else if (paddleHits === 17) {
+        result += 'amazing';
+    } else if (paddleHits === 16) {
         result += 'awesome';
-    } else if (paddleHits > 14) {
-        result += 'cool';
+    } else if (paddleHits === 15) {
+        result += 'great';
+    } else if (paddleHits === 14) {
+        result += 'pretty good';
+    } else if (paddleHits > 13) {
+        result += 'getting there';
+    } else if (paddleHits > 12) {
+        result += 'swell';
     } else if (paddleHits > 10) {
         result += 'neato';
     } else if (paddleHits > 5) {

@@ -286,8 +286,9 @@ function handleGameStateMessage(data) {
             break;
 
         case GAME_STATE.SERVE:
+            texts.resetPaddleHits(data.newGame);
             setScoresAndPaddles(data);
-            servingPlayer = data.server; // only difference with state: start
+            servingPlayer = data.server;
             break;
 
         case GAME_STATE.PLAY:
@@ -307,7 +308,6 @@ function handleGameStateMessage(data) {
         playerNumber = data.number;
         texts.setPlayer1Score(data.player1Score);
         texts.setPlayer2Score(data.player2Score);
-        texts.setPaddleHits(paddleHits);
         localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
         remotePaddle = playerNumber === 2 ? paddleLeft : paddleRight;
         document.getElementsByTagName('title')[0].innerText = `This is Pong - Player ${playerNumber}`;
@@ -370,6 +370,7 @@ function emitPaddleHit() {
     backgroundTints.push(nextTint);
 
     paddleHits++;
+    texts.addPaddleHit();
     const flightTime = paddleHitTime === 0 ? 0 : gameTime - paddleHitTime;
     paddleHitTime = gameTime;
 

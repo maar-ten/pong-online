@@ -107,7 +107,7 @@ function handlePlayerReady(data) {
         });
 
         const servingPlayer = getRandomIntInclusive(1, 2);
-        emitGameStateServe(servingPlayer);
+        emitGameStateServe(servingPlayer, true);
     }
 }
 
@@ -243,14 +243,15 @@ function emitGameStateStart() {
     });
 }
 
-function emitGameStateServe(server) {
+function emitGameStateServe(server, newGame = false) {
     players.forEach(player => {
         io.to(player.id).emit(MESSAGE.GAME_STATE, {
             state: GAME_STATE.SERVE,
             number: player.number,
             server: server,
             player1Score: getPlayerScore(1),
-            player2Score: getPlayerScore(2)
+            player2Score: getPlayerScore(2),
+            newGame: newGame
         });
     });
 }

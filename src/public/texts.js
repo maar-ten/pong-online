@@ -11,7 +11,7 @@ export default class Texts {
         this.subtitle = addText(scene, screenCenterX, screenHeight / 10 + 60, 24, 'Press Enter to Play !');
         this.player1ScoreText = addText(scene, screenCenterX - 100, screenHeight / 3, 84, 0);
         this.player2ScoreText = addText(scene, screenCenterX + 100, screenHeight / 3, 84, 0);
-        this.gameStats = addText(scene, screenCenterX, screenHeight * .64, 24, '').setAlign('center');
+        this.gameStats = addText(scene, screenCenterX, screenHeight * .64, 24, 'Press M for some music').setAlign('center');
         this.previousGameState = 0;
         this.paddleHits = 0;
         this.paddleHitsMax = 0;
@@ -56,7 +56,7 @@ export default class Texts {
                 this.subtitle.text = 'Connecting to server . . .';
                 this.title.visible = true;
                 this.subtitle.visible = true;
-                this.gameStats.visible = false;
+                this.gameStats.visible = true;
                 break;
 
             case GAME_STATE.SERVER_REJECT:
@@ -64,7 +64,7 @@ export default class Texts {
                 this.subtitle.text = 'No more room on server';
                 this.title.visible = true;
                 this.subtitle.visible = true;
-                this.gameStats.visible = false;
+                this.gameStats.visible = true;
                 break;
 
             case GAME_STATE.WAIT:
@@ -73,7 +73,7 @@ export default class Texts {
                 this.subtitle.text = 'Waiting For Other Player . . .';
                 this.title.visible = true;
                 this.subtitle.visible = true;
-                this.gameStats.visible = false;
+                this.gameStats.visible = true;
                 break;
 
             case GAME_STATE.START:
@@ -82,14 +82,14 @@ export default class Texts {
                 this.subtitle.text = 'Press Enter When Ready !';
                 this.title.visible = true;
                 this.subtitle.visible = true;
-                this.gameStats.visible = false;
+                this.gameStats.visible = true;
                 break;
 
             case GAME_STATE.START_SERVE:
                 this.subtitle.text = 'Waiting For Other Player . . .';
                 this.title.visible = false;
                 this.subtitle.visible = true;
-                this.gameStats.visible = false;
+                this.gameStats.visible = true;
                 break;
 
             case GAME_STATE.SERVE:
@@ -169,8 +169,8 @@ function getGameResult(paddleHits) {
     } else if (paddleHits > 12) {
         result += 'swell';
     } else if (paddleHits > 10) {
-        result += 'neato';
-    } else if (paddleHits > 5) {
+        result += 'neat';
+    } else if (paddleHits >= 5) {
         result += 'not bad';
     } else {
         result += 'pretty bad';

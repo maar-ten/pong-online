@@ -97,7 +97,7 @@ function preload() {
     this.load.image('background', 'assets/images/background.png');
 
     // sounds
-    this.load.audio('game-tune', 'assets/audio/Dub_Hub.mp3');
+    this.load.audio('game-tune', 'assets/audio/Another_beek_beep_beer_please.mp3');
     this.load.audio('paddle-hit', 'assets/audio/paddle-hit.mp3');
     this.load.audio('wall-hit', 'assets/audio/wall-hit.mp3');
     this.load.audio('ball-out', 'assets/audio/ball-out.mp3');
@@ -115,7 +115,7 @@ function create() {
     // music
     gameTune = this.sound.add('game-tune', {
         loop: true,
-        volume: .4
+        volume: .5
     });
 
     // create background
@@ -128,7 +128,7 @@ function create() {
                 .setOrigin(0).setTint(0x2286D8));
         }
     }
-    backgroundTints.push(0xFD603E, 0x86D822, 0x7F7F7F, 0x2286D8);
+    backgroundTints.push(0x7422d8, 0xd87422, 0x86d822, 0x2286D8);
 
     // texts
     texts = new Texts(this, cfg.GAME_HEIGHT, screenCenterX);
@@ -140,6 +140,7 @@ function create() {
     // create ball and add the paddles as colliders
     const paddleHitSound = this.sound.add('paddle-hit');
     ball = new Ball(this, screenCenterX, screenCenterY, 'ball');
+    ball.body.setAngularVelocity(150);
     ball.addCollider(paddleLeft, paddleHitSound, emitPaddleHit);
     ball.addCollider(paddleRight, paddleHitSound, emitPaddleHit);
 
@@ -148,7 +149,7 @@ function create() {
     this.physics.world.on('worldbounds', () => wallHitSound.play()); // is emitted by the ball
 
     // keyboard mappings
-    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER');
+    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M');
 
     // font settings for the performance monitor
     const perfFont = 'PressStart2P'
@@ -188,6 +189,7 @@ function update(time) {
     updateBallStatus(this);
     updateLocalPaddle();
     updateEnterKeyState();
+    updateMusicKeyState();
 
     // update texts
     texts.update(gameState, playerNumber, servingPlayer);
@@ -218,12 +220,12 @@ function updateBallStatus(scene) {
     // Register ball leaving the playing area
     if (gameState === GAME_STATE.PLAY) {
         // ball exits to the right (player 1 scores)
-        if (playerNumber === 1 && ball.x - ball.width / 2 > cfg.GAME_WIDTH) {
+        if (ball.x - ball.width / 2 > cfg.GAME_WIDTH) {
             playerScored(1);
         }
 
         // ball exits to the left (player 2 scores)
-        if (playerNumber === 2 && ball.x + ball.width / 2 < 0) {
+        if (ball.x + ball.width / 2 < 0) {
             playerScored(2);
         }
     }
@@ -248,8 +250,6 @@ function updateLocalPaddle() {
 
 function updateEnterKeyState() {
     if (Phaser.Input.Keyboard.JustDown(keys.ENTER)) {
-        gameTune.play();
-
         switch (gameState) {
             case GAME_STATE.START:
             // same as state done
@@ -266,6 +266,12 @@ function updateEnterKeyState() {
                 }
                 break;
         }
+    }
+}
+
+function updateMusicKeyState() {
+    if (Phaser.Input.Keyboard.JustDown(keys.M)) {
+        gameTune.isPlaying ? gameTune.pause() : gameTune.play();
     }
 }
 
@@ -395,11 +401,13 @@ function emitPlayerReady(playerNumber) {
 }
 
 // Emit a message and reset game state
-function playerScored(playerNumber) {
-    emitMessage(MESSAGE.ACTION, {
-        action: GAME_ACTION.SCORE,
-        player: playerNumber
-    });
+function playerScored(player) {
+    if (playerNumber === player) {
+        emitMessage(MESSAGE.ACTION, {
+            action: GAME_ACTION.SCORE,
+            player: playerNumber
+        });
+    }
     ballOutSound.play();
     ball.reset();
     servingPlayer = undefined;
@@ -470,8 +478,7 @@ function updateRobot() {
     // move the paddle towards the ball
     const dy = Math.abs(localPaddle.y - ball.y)
     if (dy > 10) {
-        // const speed = cfg.PADDLE_SPEED * 1.2;
-        const speed = cfg.PADDLE_SPEED * 0.5;
+        const speed = cfg.PADDLE_SPEED * .9;
         const direction = localPaddle.y < ball.y ? 1 : -1;
         localPaddle.body.setVelocityY(speed * direction);
     } else {

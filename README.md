@@ -10,7 +10,7 @@ Development
 ---
 To help with the development of the game I used a number of freely available resources:
 - JavaScript game library [Phaser3](https://phaser.io/) 🦄
-- Dub Hub music by [Jimmy Fontanez](https://www.youtube.com/watch?reload=9&v=qRZJra5kfGY) 🤘
+- Another beek beep beer please music by [Rolemusic](https://freemusicarchive.org/music/Rolemusic/) 🤘
 - Sounds created with [Bfxr](https://www.bfxr.net/) 🏆
 - Sounds converted to MP3 with [Convertio](https://convertio.co/)
 - Press Start 2P font by [Codeman38](https://www.fontspace.com/codeman38)
@@ -18,7 +18,7 @@ To help with the development of the game I used a number of freely available res
 - Lava texture by [Outworldz](https://www.outworldz.com/cgi/free-seamless-textures.plx)
 - Server software [NodeJS](https://nodejs.org/)
 - JavaScript 3rd party libraries as descripted in [package.json](package.json).
-- And I might have used [Stack Overflow](https://stackoverflow.com/questions?tab=Frequent) once or twice 🤣
+- I might have used [Stack Overflow](https://stackoverflow.com/questions?tab=Frequent) once or twice 🤣
 
 All this software is free to use and is created by many unsung heroes of the internet 🦸‍♀️ 
 

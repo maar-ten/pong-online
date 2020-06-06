@@ -132,10 +132,13 @@ function handleClientDisconnect(socket) {
 function handleGameAction(socket, data) {
     switch (data.action) {
         case GAME_ACTION.SERVE:
+            const servingAngle = getServingAngle(data.player);
+
             io.emit(MESSAGE.GAME_STATE, {
                 state: GAME_STATE.PLAY,
-                ballVelocity: 500,
-                ballAngle: getServingAngle(data.player)
+                ballVelocity: 600,
+                ballAngle: servingAngle,
+                angleChange: getAngleChange(servingAngle)
             });
             break;
 
@@ -197,14 +200,13 @@ function getNextPlayerNumber() {
 
 function getServingAngle(playerNumber) {
     const direction = playerNumber === 1 ? 0 : 180;
-    const degrees = getRandomIntInclusive(-45, 45) + direction;
-    return degrees / 180 * Math.PI; // conversion from degrees to radians: 180 DEG = PI radians
+    return getRandomIntInclusive(-45, 45) + direction; // in degrees
 }
 
 function getAngleChange(currentAngle) {
-    const angleChange = getRandomIntInclusive(0, 30) / 100; // 0 - 30 is between 0 - 17 degrees
-    const direction = getRandomIntInclusive(0, 1) === 1 ? 1 : -1;
-    return angleChange * direction;
+    const angleChange = getRandomIntInclusive(5, 15);
+    const direction = getRandomIntInclusive(0, 1) === 1 ? 1 : -1; // sets the direction up or down
+    return angleChange * direction; // in degrees
 }
 
 function addPoint(player) {

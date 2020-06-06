@@ -91,16 +91,16 @@ function preload() {
     this.cameras.main.backgroundColor.setTo(40, 45, 52, 255);
 
     // images
-    this.load.image('ball', 'assets/ball.png');
-    this.load.image('paddle-left', 'assets/paddle-left.png');
-    this.load.image('paddle-right', 'assets/paddle-right.png');
-    this.load.image('background', 'assets/background.png');
+    this.load.image('ball', 'assets/images/ball.png');
+    this.load.image('paddle-left', 'assets/images/paddle-left.png');
+    this.load.image('paddle-right', 'assets/images/paddle-right.png');
+    this.load.image('background', 'assets/images/background.png');
 
     // sounds
-    this.load.audio('game-tune', 'assets/Videogame2.mp3');
-    this.load.audio('paddle-hit', 'assets/paddle-hit.mp3');
-    this.load.audio('wall-hit', 'assets/wall-hit.mp3');
-    this.load.audio('ball-out', 'assets/ball-out.mp3');
+    this.load.audio('game-tune', 'assets/audio/Videogame2.mp3');
+    this.load.audio('paddle-hit', 'assets/audio/paddle-hit.mp3');
+    this.load.audio('wall-hit', 'assets/audio/wall-hit.mp3');
+    this.load.audio('ball-out', 'assets/audio/ball-out.mp3');
 }
 
 //-- Called by the game engine
@@ -294,6 +294,7 @@ function handleGameStateMessage(data) {
             paddleHits = 0;
             paddleHitTime = 0;
             ball.setVelocity(data.ballVelocity, data.ballAngle);
+            ball.setAngleChange(data.angleChange);
             break;
 
         case GAME_STATE.DONE:
@@ -373,7 +374,7 @@ function emitPaddleHit() {
 
     emitMessage(MESSAGE.ACTION, {
         action: GAME_ACTION.PADDLE_HIT,
-        currentAngle: ball.body.velocity.angle(),
+        currentAngle: ball.body.velocity.angle() * Phaser.Math.RAD_TO_DEG,
         flightData: {
             player: playerNumber,
             flightNumber: paddleHits,
@@ -467,7 +468,8 @@ function updateRobot() {
     // move the paddle towards the ball
     const dy = Math.abs(localPaddle.y - ball.y)
     if (dy > 10) {
-        const speed = cfg.PADDLE_SPEED * 1.2;
+        // const speed = cfg.PADDLE_SPEED * 1.2;
+        const speed = cfg.PADDLE_SPEED * 0.5;
         const direction = localPaddle.y < ball.y ? 1 : -1;
         localPaddle.body.setVelocityY(speed * direction);
     } else {

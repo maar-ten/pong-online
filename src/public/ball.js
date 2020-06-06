@@ -1,4 +1,5 @@
 const BALL_SIZE = 20;
+const ACCELERATION = 1.08;
 
 export default class Ball extends Phaser.GameObjects.Image {
 
@@ -35,14 +36,15 @@ export default class Ball extends Phaser.GameObjects.Image {
             this.sound.play();
 
             if (this.body.touching.left || this.body.touching.right) {
+                const angle = this.body.velocity.angle();
+                const angleChange = this.angleChanges.length ? this.angleChanges.shift(): 0;
+
                 // increase speed
                 this.body.velocity.setAngle(0);
-                this.body.velocity.x = -this.body.velocity.x * 1.05;
+                this.body.velocity.x = -this.body.velocity.x * ACCELERATION;
 
                 // slightly change angle
-                const angle = this.body.velocity.angle();
-                const angleChange = this.angleChanges.shift();
-                this.body.velocity.setAngle(angle + angleChange ? angleChange : 0);
+                this.body.velocity.setAngle((angle + angleChange) * Phaser.Math.DEG_TO_RAD);
 
                 // report back to get a new angle
                 this.collisionCallbackFn();
@@ -58,8 +60,7 @@ export default class Ball extends Phaser.GameObjects.Image {
 
     setVelocity(velocity, angle) {
         this.body.setVelocity(velocity, 0);
-        this.body.velocity.setAngle(angle);
-        this.angleChanges.push(angle);
+        this.body.velocity.setAngle(angle * Phaser.Math.DEG_TO_RAD);
     }
 
     setAngleChange(angle) {

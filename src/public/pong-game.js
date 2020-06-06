@@ -9,37 +9,56 @@ const socket = io();
 
 // Phaser game config
 new Phaser.Game({
-  type: Phaser.AUTO,
-  width: cfg.GAME_WIDTH,
-  height: cfg.GAME_HEIGHT,
-  pixelArt: true,
-  physics: {
-    default: 'arcade'
-  },
-  scene: {
-    preload: preload,
-    create: create,
-    update: update
-  },
-  audio: {
-    disableWebAudio: true
-  }
+    title: 'This is Pong!',
+    version: 2,
+    banner: {
+        background: [
+            '#D32754',
+            '#2286D8',
+            '#FEA339',
+            '#FD5F3F'
+        ]
+    },
+    type: Phaser.AUTO,
+    width: cfg.GAME_WIDTH,
+    height: cfg.GAME_HEIGHT,
+    pixelArt: true,
+    physics: {
+        default: 'arcade'
+    },
+    scene: {
+        preload: preload,
+        create: create,
+        update: update
+    },
+    audio: {
+        disableWebAudio: true
+    }
 });
 
 // assets
+let paddleLeft, paddleRight, ball;    // sprites
+let wallHitSound, ballOutSound;       // sounds
+let gameTune                          // music
 let texts, fpsText, mpsText, latText; // texts
-let paddleLeft, paddleRight, ball; // moving parts
-let wallHitSound, ballOutSound; // sounds
-let keys; // key bindings
+let keys;                             // key bindings
 
 // game state variables
 let gameState = GAME_STATE.CONNECT;
 let gameTime;
-let previousGameState;
 let playerNumber;
 let servingPlayer;
 let localPaddle;
 let remotePaddle;
+
+const backgroundTiles = [];
+const backgroundTints = [];
+
+let paddleHits = 0;
+let paddleHitTime = 0;
+let flightTimeDifference = 0;
+let flightTimeCorrected = false;
+const FLIGHT_TIME_DIFF_THRESHOLD = 50;
 
 const ROBOTIC_PLAYER_NUMBER = 2;
 let roboticTimeoutFrameCount = 0;
@@ -68,200 +87,267 @@ let latCount = 0;
 
 //-- Called by the game engine and used for loading assets over the internet
 function preload() {
-  // set background color
-  this.cameras.main.backgroundColor.setTo(40, 45, 52, 255);
+    // set background color
+    this.cameras.main.backgroundColor.setTo(40, 45, 52, 255);
 
-  // sounds
-  this.load.audio('paddle-hit', 'assets/paddle-hit.mp3');
-  this.load.audio('wall-hit', 'assets/wall-hit.mp3');
-  this.load.audio('ball-out', 'assets/ball-out.mp3');
+    // images
+    this.load.image('ball', 'assets/images/ball.png');
+    this.load.image('paddle-left', 'assets/images/paddle-left.png');
+    this.load.image('paddle-right', 'assets/images/paddle-right.png');
+    this.load.image('background', 'assets/images/background.png');
+
+    // sounds
+    this.load.audio('game-tune', 'assets/audio/Another_beek_beep_beer_please.mp3');
+    this.load.audio('paddle-hit', 'assets/audio/paddle-hit.mp3');
+    this.load.audio('wall-hit', 'assets/audio/wall-hit.mp3');
+    this.load.audio('ball-out', 'assets/audio/ball-out.mp3');
 }
 
 //-- Called by the game engine
 function create() {
-  const screenCenterX = Math.round(this.cameras.main.worldView.x + this.cameras.main.width / 2);
-  const screenCenterY = Math.round(this.cameras.main.worldView.y + this.cameras.main.height / 2);
+    const screenCenterX = Math.round(this.cameras.main.worldView.x + this.cameras.main.width / 2);
+    const screenCenterY = Math.round(this.cameras.main.worldView.y + this.cameras.main.height / 2);
 
-  // sounds
-  wallHitSound = this.sound.add('wall-hit');
-  ballOutSound = this.sound.add('ball-out');
+    // sounds
+    wallHitSound = this.sound.add('wall-hit');
+    ballOutSound = this.sound.add('ball-out');
 
-  // texts
-  texts = new Texts(this, cfg.GAME_HEIGHT, screenCenterX);
+    // music
+    gameTune = this.sound.add('game-tune', {
+        loop: true,
+        volume: .5
+    });
 
-  // create paddles
-  paddleLeft = new Paddle(this, 30, 120);
-  paddleRight = new Paddle(this, cfg.GAME_WIDTH - 30, cfg.GAME_HEIGHT - 120);
+    // create background
+    const tileSize = 384;
+    const tilesHorizontal = Math.ceil(cfg.GAME_WIDTH / tileSize);
+    for (let i = 0; i < tilesHorizontal; i++) {
+        const tilesVertical = Math.ceil(cfg.GAME_HEIGHT / tileSize);
+        for (let j = 0; j < tilesVertical; j++) {
+            backgroundTiles.push(this.add.image(i * tileSize, j * tileSize, 'background')
+                .setOrigin(0).setTint(0x2286D8));
+        }
+    }
+    backgroundTints.push(0x7422d8, 0xd87422, 0x86d822, 0x2286D8);
 
-  // create ball and add the paddles as colliders
-  const paddleHitSound = this.sound.add('paddle-hit');
-  ball = new Ball(this, screenCenterX, screenCenterY);
-  ball.addCollider(paddleLeft, paddleHitSound, emitPaddleHit);
-  ball.addCollider(paddleRight, paddleHitSound, emitPaddleHit);
+    // texts
+    texts = new Texts(this, cfg.GAME_HEIGHT, screenCenterX);
 
-  // let objects exit left and right of screen
-  this.physics.world.setBoundsCollision(false, false, true, true);
-  this.physics.world.on('worldbounds', () => wallHitSound.play()); // is emitted by the ball
+    // create paddles
+    paddleLeft = new Paddle(this, 30, 120, 'paddle-left');
+    paddleRight = new Paddle(this, cfg.GAME_WIDTH - 30, cfg.GAME_HEIGHT - 120, 'paddle-right');
 
-  // keyboard mappings
-  keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER');
+    // create ball and add the paddles as colliders
+    const paddleHitSound = this.sound.add('paddle-hit');
+    ball = new Ball(this, screenCenterX, screenCenterY, 'ball');
+    ball.body.setAngularVelocity(150);
+    ball.addCollider(paddleLeft, paddleHitSound, emitPaddleHit);
+    ball.addCollider(paddleRight, paddleHitSound, emitPaddleHit);
 
-  // fps monitor
-  fpsText = addText(this, 10, 10, 8, 'FPS 0').setOrigin(0).setColor('#00ff00aa').setDepth(1);
-  fpsText.visible = cfg.PERF_MON;
+    // let objects exit left and right of screen
+    this.physics.world.setBoundsCollision(false, false, true, true);
+    this.physics.world.on('worldbounds', () => wallHitSound.play()); // is emitted by the ball
 
-  // messages monitor
-  mpsText = addText(this, 10, 20, 8, 'MPS 0').setOrigin(0).setColor('#00ff00aa').setDepth(1);
-  mpsText.visible = cfg.PERF_MON;
+    // keyboard mappings
+    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M');
 
-  // latency monitor
-  latText = addText(this, 10, 30, 8, 'LAT 0').setOrigin(0).setColor('#00ff00aa').setDepth(1);
-  latText.visible = cfg.PERF_MON;
-  socket.on(MESSAGE.LATENCY, (data) => {
-    latTotal += Date.now() - data.time;
-    latCount++;
-  });
+    // font settings for the performance monitor
+    const perfFont = 'PressStart2P'
+    const perfFontColor = '#00ff00aa';
+    const perfXOffset = 10;
 
-  // react to game state changes
-  socket.on(MESSAGE.GAME_STATE, (data) => handleGameStateMessage(data));
+    // fps monitor
+    fpsText = addText(this, perfXOffset, 10, 8, 'FPS 0', perfFont, perfFontColor).setOrigin(0).setDepth(1);
+    fpsText.visible = cfg.PERF_MON;
 
-  // react to remote player actions
-  socket.on(MESSAGE.ACTION, (data) => handleRemoteActionMessage(data));
+    // messages monitor
+    mpsText = addText(this, perfXOffset, 20, 8, 'MPS 0', perfFont, perfFontColor).setOrigin(0).setDepth(1);
+    mpsText.visible = cfg.PERF_MON;
 
-  // react to connection errors
-  socket.on(MESSAGE.CONNECT_ERROR, () => gameState = GAME_STATE.CONNECT);
+    // latency monitor
+    latText = addText(this, perfXOffset, 30, 8, 'LAT 0', perfFont, perfFontColor).setOrigin(0).setDepth(1);
+    latText.visible = cfg.PERF_MON;
+    socket.on(MESSAGE.LATENCY, (data) => {
+        latTotal += Date.now() - data.time;
+        latCount++;
+    });
+
+    // react to game state changes
+    socket.on(MESSAGE.GAME_STATE, (data) => handleGameStateMessage(data));
+
+    // react to remote player actions
+    socket.on(MESSAGE.ACTION, (data) => handleRemoteActionMessage(data));
+
+    // react to connection errors
+    socket.on(MESSAGE.CONNECT_ERROR, () => gameState = GAME_STATE.CONNECT);
 }
 
 //-- Called by the game engine for every frame drawn to the screen
 function update(time) {
-  gameTime = time;
+    gameTime = time;
 
-  updateBallStatus();
-  updateLocalPaddle();
-  updateEnterKeyState();
+    updateBallStatus(this);
+    updateLocalPaddle();
+    updateEnterKeyState();
+    updateMusicKeyState();
 
-  // texts only change when the game state changes
-  if (previousGameState !== gameState) {
+    // update texts
     texts.update(gameState, playerNumber, servingPlayer);
-  }
 
-  // enable robotic paddle for robotic player
-  if (cfg.ROBOT_ENABLED && playerNumber === ROBOTIC_PLAYER_NUMBER) {
-    updateRobot();
-  }
-  // update performance statistics
-  if (cfg.PERF_MON) updateStats();
+    // enable robotic paddle for robotic player
+    if (cfg.ROBOT_ENABLED && playerNumber === ROBOTIC_PLAYER_NUMBER) {
+        updateRobot();
+    }
+    // update performance statistics
+    if (cfg.PERF_MON) updateStats();
 }
 
-// Registers when one of the players scores a point
-function updateBallStatus() {
-  if (gameState === GAME_STATE.PLAY) {
-    // ball exits to the right (player 1 scores)
-    if (playerNumber === 1 && ball.x - ball.width / 2 > cfg.GAME_WIDTH) {
-      playerScored(1);
+// Registers ball flight sync issues and when one of the players scores a point
+function updateBallStatus(scene) {
+    // Correct flight time differences between the players by slowing down the fastest one
+    if (flightTimeDifference > FLIGHT_TIME_DIFF_THRESHOLD && !flightTimeCorrected) {
+        scene.physics.pause();
+        scene.time.addEvent({
+            delay: FLIGHT_TIME_DIFF_THRESHOLD * 2,
+            callback: () => {
+                scene.physics.resume();
+            },
+            callbackScope: scene
+        });
+        flightTimeCorrected = true;
     }
 
-    // ball exits to the left (player 2 scores)
-    if (playerNumber === 2 && ball.x + ball.width / 2 < 0) {
-      playerScored(2);
+    // Register ball leaving the playing area
+    if (gameState === GAME_STATE.PLAY) {
+        // ball exits to the right (player 1 scores)
+        if (ball.x - ball.width / 2 > cfg.GAME_WIDTH) {
+            playerScored(1);
+        }
+
+        // ball exits to the left (player 2 scores)
+        if (ball.x + ball.width / 2 < 0) {
+            playerScored(2);
+        }
     }
-  }
 }
 
 function updateLocalPaddle() {
-  if (localPaddle) {
-    // react to keyboard presses
-    if (keys.UP.isDown || keys.W.isDown) {
-      localPaddle.body.setVelocityY(-cfg.PADDLE_SPEED);
-    } else if (keys.DOWN.isDown || keys.S.isDown) {
-      localPaddle.body.setVelocityY(cfg.PADDLE_SPEED);
-    } else {
-      localPaddle.body.setVelocityY(0);
-    }
+    if (localPaddle) {
+        // react to keyboard presses
+        if (keys.UP.isDown || keys.W.isDown) {
+            localPaddle.body.setVelocityY(-cfg.PADDLE_SPEED);
+        } else if (keys.DOWN.isDown || keys.S.isDown) {
+            localPaddle.body.setVelocityY(cfg.PADDLE_SPEED);
+        } else {
+            localPaddle.body.setVelocityY(0);
+        }
 
-    // emit paddle movement
-    localPaddleFrames++;
-    emitPaddleMoved();
-  }
+        // emit paddle movement
+        localPaddleFrames++;
+        emitPaddleMoved();
+    }
 }
 
 function updateEnterKeyState() {
-  if (Phaser.Input.Keyboard.JustDown(keys.ENTER)) {
-    switch (gameState) {
-      case GAME_STATE.START:
-      // same as state done
-      case GAME_STATE.DONE:
-        emitPlayerReady(playerNumber);
-        break;
+    if (Phaser.Input.Keyboard.JustDown(keys.ENTER)) {
+        switch (gameState) {
+            case GAME_STATE.START:
+            // same as state done
+            case GAME_STATE.DONE:
+                emitPlayerReady(playerNumber);
+                break;
 
-      case GAME_STATE.SERVE:
-        if (servingPlayer === playerNumber) {
-          emitMessage(MESSAGE.ACTION, {
-            action: GAME_ACTION.SERVE,
-            player: playerNumber
-          });
+            case GAME_STATE.SERVE:
+                if (servingPlayer === playerNumber) {
+                    emitMessage(MESSAGE.ACTION, {
+                        action: GAME_ACTION.SERVE,
+                        player: playerNumber
+                    });
+                }
+                break;
         }
-        break;
     }
-  }
 }
 
-// Handle game state changes coming from the server
+function updateMusicKeyState() {
+    if (Phaser.Input.Keyboard.JustDown(keys.M)) {
+        gameTune.isPlaying ? gameTune.pause() : gameTune.play();
+    }
+}
+
+// Handle game state changes from the server
 function handleGameStateMessage(data) {
-  previousGameState = gameState;
-  gameState = data.state;
-  ball.reset();
-  ball.setVelocity(0, 0);
+    gameState = data.state;
+    ball.reset();
+    ball.setVelocity(0, 0);
 
-  switch (data.state) {
-    case GAME_STATE.WAIT:
-      playerNumber = data.number;
-      localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
-      break;
+    switch (data.state) {
+        case GAME_STATE.WAIT:
+            playerNumber = data.number;
+            localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
+            break;
 
-    case GAME_STATE.START:
-      setScoresAndPaddles(data)
-      break;
+        case GAME_STATE.START:
+            setScoresAndPaddles(data)
+            break;
 
-    case GAME_STATE.SERVE:
-      setScoresAndPaddles(data);
-      servingPlayer = data.server; // only difference with state: start
-      break;
+        case GAME_STATE.SERVE:
+            texts.resetPaddleHits(data.newGame);
+            setScoresAndPaddles(data);
+            servingPlayer = data.server;
+            break;
 
-    case GAME_STATE.PLAY:
-      ball.setVelocity(data.ballVelocity, data.ballAngle);
-      break;
+        case GAME_STATE.PLAY:
+            paddleHits = 0;
+            paddleHitTime = 0;
+            ball.setVelocity(data.ballVelocity, data.ballAngle);
+            ball.setAngleChange(data.angleChange);
+            break;
 
-    case GAME_STATE.DONE:
-      texts.setPlayer1Score(data.player1Score);
-      texts.setPlayer2Score(data.player2Score);
-      break;
-  }
+        case GAME_STATE.DONE:
+            texts.setPlayer1Score(data.player1Score);
+            texts.setPlayer2Score(data.player2Score);
+            break;
+    }
 
-  function setScoresAndPaddles(data) {
-    playerNumber = data.number;
-    texts.setPlayer1Score(data.player1Score);
-    texts.setPlayer2Score(data.player2Score);
-    localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
-    remotePaddle = playerNumber === 2 ? paddleLeft : paddleRight;
+    function setScoresAndPaddles(data) {
+        playerNumber = data.number;
+        texts.setPlayer1Score(data.player1Score);
+        texts.setPlayer2Score(data.player2Score);
+        localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
+        remotePaddle = playerNumber === 2 ? paddleLeft : paddleRight;
+        document.getElementsByTagName('title')[0].innerText = `This is Pong - Player ${playerNumber}`;
 
-    localPaddlePreviousY = localPaddle.y;
-  }
+        localPaddlePreviousY = localPaddle.y;
+    }
 }
 
-// Handle incoming action messages from the other player
+// Handle incoming action messages from the server
 function handleRemoteActionMessage(data) {
-  mpsCount++;
+    mpsCount++;
 
-  switch (data.action) {
-    case GAME_ACTION.PADDLE_MOVE:
-      remotePaddle.y = data.y;
-      break;
+    switch (data.action) {
+        case GAME_ACTION.PADDLE_MOVE:
+            remotePaddle.y = data.y;
+            break;
 
-    case GAME_ACTION.PADDLE_HIT:
-      ball.setAngleChange(data.angleChange);
-      break;
-  }
+        case GAME_ACTION.PADDLE_HIT:
+            ball.setAngleChange(data.angleChange);
+
+            const localFlight = data.flightData.find(flight => flight.player === playerNumber);
+            const remoteFlight = data.flightData.find(flight => flight.player !== playerNumber);
+
+            if (localFlight && remoteFlight) {
+                if (localFlight.flightCorrected || remoteFlight.flightCorrected) {
+                    flightTimeCorrected = false;
+                    flightTimeDifference = 0;
+                } else {
+                    flightTimeDifference += remoteFlight.flightTime - localFlight.flightTime;
+                }
+            }
+
+            break;
+    }
 }
 
 /**
@@ -270,137 +356,155 @@ function handleRemoteActionMessage(data) {
  * Amount of change can be configured by changing the thresholds: LOCAL_PADDLE_FRAMES_THRESHOLD and LOCAL_PADDLE_Y_THRESHOLD
  */
 function emitPaddleMoved() {
-  let localPaddleDy = Math.abs(localPaddlePreviousY - localPaddle.y);
-  if (localPaddleFrames >= LOCAL_PADDLE_FRAMES_THRESHOLD && localPaddleDy >= LOCAL_PADDLE_Y_THRESHOLD) {
-    emitMessage(MESSAGE.ACTION, {
-      action: GAME_ACTION.PADDLE_MOVE,
-      y: localPaddle.y
-    });
+    let localPaddleDy = Math.abs(localPaddlePreviousY - localPaddle.y);
+    if (localPaddleFrames >= LOCAL_PADDLE_FRAMES_THRESHOLD && localPaddleDy >= LOCAL_PADDLE_Y_THRESHOLD) {
+        emitMessage(MESSAGE.ACTION, {
+            action: GAME_ACTION.PADDLE_MOVE,
+            y: localPaddle.y
+        });
 
-    // reset counters
-    localPaddleFrames = 0;
-    localPaddlePreviousY = localPaddle.y;
-  }
+        // reset counters
+        localPaddleFrames = 0;
+        localPaddlePreviousY = localPaddle.y;
+    }
 }
 
 function emitPaddleHit() {
-  emitMessage(MESSAGE.ACTION, {
-    action: GAME_ACTION.PADDLE_HIT,
-    currentAngle: ball.body.velocity.angle()
-  });
+    // change background color
+    const nextTint = backgroundTints.shift();
+    backgroundTiles.forEach(tile => tile.setTint(nextTint));
+    backgroundTints.push(nextTint);
+
+    paddleHits++;
+    texts.addPaddleHit();
+    const flightTime = paddleHitTime === 0 ? 0 : gameTime - paddleHitTime;
+    paddleHitTime = gameTime;
+
+    emitMessage(MESSAGE.ACTION, {
+        action: GAME_ACTION.PADDLE_HIT,
+        currentAngle: ball.body.velocity.angle() * Phaser.Math.RAD_TO_DEG,
+        flightData: {
+            player: playerNumber,
+            flightNumber: paddleHits,
+            flightTime: flightTime,
+            flightCorrected: flightTimeCorrected
+        }
+    });
 }
 
 function emitPlayerReady(playerNumber) {
-  gameState = GAME_STATE.START_SERVE;
-  emitMessage(MESSAGE.READY, {
-    player: playerNumber,
-    ready: true
-  });
+    gameState = GAME_STATE.START_SERVE;
+    emitMessage(MESSAGE.READY, {
+        player: playerNumber,
+        ready: true
+    });
 }
 
 // Emit a message and reset game state
-function playerScored(playerNumber) {
-  emitMessage(MESSAGE.ACTION, {
-    action: GAME_ACTION.SCORE,
-    player: playerNumber,
-  });
-  ballOutSound.play();
-  ball.reset();
-  servingPlayer = undefined;
-  gameState = GAME_STATE.SERVE_PLAY;
+function playerScored(player) {
+    if (playerNumber === player) {
+        emitMessage(MESSAGE.ACTION, {
+            action: GAME_ACTION.SCORE,
+            player: playerNumber
+        });
+    }
+    ballOutSound.play();
+    ball.reset();
+    servingPlayer = undefined;
+    gameState = GAME_STATE.SERVE_PLAY;
 }
 
 function emitMessage(type, data) {
-  mpsCount++;
-  socket.emit(type, data);
+    mpsCount++;
+    socket.emit(type, data);
 }
 
 function updateStats() {
-  updateFps();
-  updateMps();
-  updateLat();
+    updateFps();
+    updateMps();
+    updateLat();
 }
 
 // The FPS displayed is averaged over a number of frames to make it less jittery
 function updateFps() {
-  fpsCount++;
+    fpsCount++;
 
-  if (fpsCount >= FPS_FRAMES_THRESHOLD) {
-    fpsText.text = 'FPS ' + Math.round(fpsCount / (gameTime - fpsTime) * 1000);
+    if (fpsCount >= FPS_FRAMES_THRESHOLD) {
+        fpsText.text = 'FPS ' + Math.round(fpsCount / (gameTime - fpsTime) * 1000);
 
-    // reset state
-    fpsCount = 0;
-    fpsTime = gameTime;
-  }
+        // reset state
+        fpsCount = 0;
+        fpsTime = gameTime;
+    }
 }
 
 // The MPS (messages per second) displayed is averaged over a number of frames to make it less jittery
 function updateMps() {
-  const timeDiff = gameTime - mpsTime;
+    const timeDiff = gameTime - mpsTime;
 
-  if (timeDiff >= MPS_TIME_THRESHOLD) {
-    const averageMsgCount = Math.round(mpsCount / timeDiff * 1000);
-    mpsText.text = 'MPS ' + averageMsgCount;
+    if (timeDiff >= MPS_TIME_THRESHOLD) {
+        const averageMsgCount = Math.round(mpsCount / timeDiff * 1000);
+        mpsText.text = 'MPS ' + averageMsgCount;
 
-    // reset counters
-    mpsTime = gameTime;
-    mpsCount = 0;
-  }
+        // reset counters
+        mpsTime = gameTime;
+        mpsCount = 0;
+    }
 }
 
 // The LAT (latency) displayed is averaged over a number of messages that are send at a certain interval
 function updateLat() {
 
-  // update the latency report when the threshold expires
-  if (latCount >= LAT_COUNT_THRESHOLD) {
-    latText.text = 'LAT ' + Math.round(latTotal / latCount);
-    latTotal = 0;
-    latCount = 0;
-  }
+    // update the latency report when the threshold expires
+    if (latCount >= LAT_COUNT_THRESHOLD) {
+        latText.text = 'LAT ' + Math.round(latTotal / latCount);
+        latTotal = 0;
+        latCount = 0;
+    }
 
-  // measure latency when the interval expires
-  const now = Date.now();
-  if (now >= latTime + (LAT_INTERVAL * 1000)) {
-    emitMessage(MESSAGE.LATENCY, {
-      time: now
-    });
-    latTime = now;
-  }
+    // measure latency when the interval expires
+    const now = Date.now();
+    if (now >= latTime + (LAT_INTERVAL * 1000)) {
+        emitMessage(MESSAGE.LATENCY, {
+            time: now
+        });
+        latTime = now;
+    }
 }
 
 // Code for controlling one of the paddles automatically
 function updateRobot() {
 
-  // move the paddle towards the ball
-  const dy = Math.abs(localPaddle.y - ball.y)
-  if (dy > 10) {
-    const speed = cfg.PADDLE_SPEED * 1.2;
-    const direction = localPaddle.y < ball.y ? 1 : -1;
-    localPaddle.body.setVelocityY(speed * direction);
-  } else {
-    localPaddle.body.setVelocityY(0);
-  }
+    // move the paddle towards the ball
+    const dy = Math.abs(localPaddle.y - ball.y)
+    if (dy > 10) {
+        const speed = cfg.PADDLE_SPEED * .9;
+        const direction = localPaddle.y < ball.y ? 1 : -1;
+        localPaddle.body.setVelocityY(speed * direction);
+    } else {
+        localPaddle.body.setVelocityY(0);
+    }
 
-  // simulate pressing <ENTER>
-  switch (gameState) {
-    case GAME_STATE.START:
-    case GAME_STATE.DONE:
-      emitPlayerReady(playerNumber);
-      break;
+    // simulate pressing <ENTER>
+    switch (gameState) {
+        case GAME_STATE.START:
+        case GAME_STATE.DONE:
+            emitPlayerReady(playerNumber);
+            break;
 
-    case GAME_STATE.SERVE:
-      if (playerNumber === servingPlayer) {
-        roboticTimeoutFrameCount++;
+        case GAME_STATE.SERVE:
+            if (playerNumber === servingPlayer) {
+                roboticTimeoutFrameCount++;
 
-        // the robot serves with a little delay
-        if (roboticTimeoutFrameCount >= 100) {
-          emitMessage(MESSAGE.ACTION, {
-            action: GAME_ACTION.SERVE,
-            player: playerNumber,
-          });
-          roboticTimeoutFrameCount = 0;
-        }
-        break;
-      }
-  }
+                // the robot serves with a little delay
+                if (roboticTimeoutFrameCount >= 100) {
+                    emitMessage(MESSAGE.ACTION, {
+                        action: GAME_ACTION.SERVE,
+                        player: playerNumber
+                    });
+                    roboticTimeoutFrameCount = 0;
+                }
+                break;
+            }
+    }
 }

@@ -1,9 +1,9 @@
 const GAME_CONFIG = {
     // some general settings
-    GAME_WIDTH: 900,
-    GAME_HEIGHT: 540,
+    GAME_WIDTH: 1280,
+    GAME_HEIGHT: 768,
     GAME_LENGTH: 2, // the number of points needed to win a game
-    PADDLE_SPEED: 600,
+    PADDLE_SPEED: 800,
     PERF_MON: true, // display performance statistics in the top left corner
     ROBOT_ENABLED: true
 }

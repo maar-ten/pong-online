@@ -4,22 +4,26 @@
     <style type="text/css">
         @font-face {
             font-family: 'PressStart2P';
-            src: url('assets/PressStart2P-vaV7.ttf') format('truetype');
+            src: url('assets/fonts/PressStart2P.ttf') format('truetype');
+        }
+
+        @font-face {
+            font-family: 'DeadSpace';
+            src: url('assets/fonts/Dead_Space.ttf') format('truetype');
         }
 
         .fontLoader {
-            font-family: 'PressStart2P';
             position: absolute;
             top: -1000px;
         }
     </style>
-    <script src="lib/socket.io.slim.js"></script> 
-    <script src="lib/phaser.min.js"></script>
-    <script src="lib/phaser-arcade-physics.min.js"></script>
+    <script src="assets/lib/socket.io.slim.js"></script>
+    <script src="assets/lib/phaser.min.js"></script>
     <script type="module" src="pong-game.js"></script>
     <title>This is Pong!</title>
 </head>
 <body>
-    <div class="fontLoader">-</div>
+<div class="fontLoader" style="font-family: 'DeadSpace'">-</div>
+<div class="fontLoader" style="font-family: 'PressStart2P'">-</div>
 </body>
 </html>

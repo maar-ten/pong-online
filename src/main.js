@@ -20,24 +20,54 @@ const app = express();
 const httpServer = http.createServer(app);
 const io = socketio(httpServer);
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // game state variables
 const players = [];
 let paddleHits = 0;
 let flightData = [];
+let robotEnabled = cfg.ROBOT_ENABLED;
+let perfMonEnabled = cfg.PERF_MON_ENABLED;
 
 // serve static game files from public folder
 app.use(express.static(join(__dirname, 'public')));
 
-// configure reset url
+// configure status message
 app.get('/pung', (req, res) => {
-    players.forEach(player => io.sockets.connected[player.id].disconnect());
-    players.splice(0);
-    flightData = [];
+    const message = `
+        Players connected: ${players.length}<br>
+        Robotic player: ${robotEnabled ? 'on' : 'off'}<br>
+        Performance monitor: ${perfMonEnabled ? 'on' : 'off'}<br>
+    `;
+    console.info(message);
+    res.send(message);
+});
 
-    console.info('Killed game session and server connections');
-    res.send('Killed game session and server connections');
+// configure reset url
+app.get('/pung-reset', (req, res) => {
+    resetSession();
+
+    const message = 'Killed game session and server connections.';
+    console.info(message);
+    res.send(message);
+});
+
+// configure robot switch
+app.get('/pung-robot', (req, res) => {
+    robotEnabled = !robotEnabled;
+
+    const message = robotEnabled ? 'Player 2 is now a robot, beep boop.' : 'Player 2 is no longer a robot.';
+    console.info(message);
+    res.send(message);
+});
+
+// configure robot switch
+app.get('/pung-perfmon', (req, res) => {
+    perfMonEnabled = !perfMonEnabled;
+
+    const message = perfMonEnabled ? 'Performance monitor is now on.' : 'Performance monitor is now off.';
+    console.info(message);
+    res.send(message);
 });
 
 // start listening for requests
@@ -238,7 +268,9 @@ function emitGameStateStart() {
             state: GAME_STATE.START,
             number: player.number,
             player1Score: getPlayerScore(1),
-            player2Score: getPlayerScore(2)
+            player2Score: getPlayerScore(2),
+            robotEnabled: robotEnabled,
+            perfMonEnabled: perfMonEnabled
         });
     });
 }
@@ -262,6 +294,13 @@ function emitGameStateDone() {
         player1Score: getPlayerScore(1),
         player2Score: getPlayerScore(2)
     });
+}
+
+// Disconnect players and reset session data
+function resetSession() {
+    players.forEach(player => io.sockets.connected[player.id].disconnect());
+    players.splice(0);
+    flightData = [];
 }
 
 // remember to escape backslashes

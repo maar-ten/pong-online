@@ -50,6 +50,8 @@ let playerNumber;
 let servingPlayer;
 let localPaddle;
 let remotePaddle;
+let robotEnabled = cfg.ROBOT_ENABLED;
+let perfMonEnabled = cfg.PERF_MON_ENABLED;
 
 const backgroundTiles = [];
 const backgroundTints = [];
@@ -158,15 +160,15 @@ function create() {
 
     // fps monitor
     fpsText = addText(this, perfXOffset, 10, 8, 'FPS 0', perfFont, perfFontColor).setOrigin(0).setDepth(1);
-    fpsText.visible = cfg.PERF_MON;
+    fpsText.visible = perfMonEnabled;
 
     // messages monitor
     mpsText = addText(this, perfXOffset, 20, 8, 'MPS 0', perfFont, perfFontColor).setOrigin(0).setDepth(1);
-    mpsText.visible = cfg.PERF_MON;
+    mpsText.visible = perfMonEnabled;
 
     // latency monitor
     latText = addText(this, perfXOffset, 30, 8, 'LAT 0', perfFont, perfFontColor).setOrigin(0).setDepth(1);
-    latText.visible = cfg.PERF_MON;
+    latText.visible = perfMonEnabled;
     socket.on(MESSAGE.LATENCY, (data) => {
         latTotal += Date.now() - data.time;
         latCount++;
@@ -195,11 +197,11 @@ function update(time) {
     texts.update(gameState, playerNumber, servingPlayer);
 
     // enable robotic paddle for robotic player
-    if (cfg.ROBOT_ENABLED && playerNumber === ROBOTIC_PLAYER_NUMBER) {
+    if (robotEnabled && playerNumber === ROBOTIC_PLAYER_NUMBER) {
         updateRobot();
     }
     // update performance statistics
-    if (cfg.PERF_MON) updateStats();
+    if (perfMonEnabled) updateStats();
 }
 
 // Registers ball flight sync issues and when one of the players scores a point
@@ -288,7 +290,9 @@ function handleGameStateMessage(data) {
             break;
 
         case GAME_STATE.START:
-            setScoresAndPaddles(data)
+            setScoresAndPaddles(data);
+            perfMonEnabled = data.perfMonEnabled;
+            robotEnabled = data.robotEnabled;
             break;
 
         case GAME_STATE.SERVE:
@@ -427,6 +431,7 @@ function updateStats() {
 
 // The FPS displayed is averaged over a number of frames to make it less jittery
 function updateFps() {
+    fpsText.visible = perfMonEnabled;
     fpsCount++;
 
     if (fpsCount >= FPS_FRAMES_THRESHOLD) {
@@ -440,6 +445,7 @@ function updateFps() {
 
 // The MPS (messages per second) displayed is averaged over a number of frames to make it less jittery
 function updateMps() {
+    mpsText.visible = perfMonEnabled;
     const timeDiff = gameTime - mpsTime;
 
     if (timeDiff >= MPS_TIME_THRESHOLD) {
@@ -454,6 +460,7 @@ function updateMps() {
 
 // The LAT (latency) displayed is averaged over a number of messages that are send at a certain interval
 function updateLat() {
+    latText.visible = perfMonEnabled;
 
     // update the latency report when the threshold expires
     if (latCount >= LAT_COUNT_THRESHOLD) {
@@ -504,7 +511,7 @@ function updateRobot() {
                     });
                     roboticTimeoutFrameCount = 0;
                 }
-                break;
             }
+            break;
     }
 }

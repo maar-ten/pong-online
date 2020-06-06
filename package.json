@@ -6,6 +6,9 @@
     "type": "git",
     "url": "git+https://github.com/maar-ten/pong-online.git"
   },
+  "engines": {
+    "node": ">=12.18.x"
+  },
   "private": true,
   "keywords": [
     "Pong",
@@ -23,7 +26,8 @@
   "type": "module",
   "main": "src/main.js",
   "scripts": {
-    "pong": "node src/main.js"
+    "pong": "node src/main.js",
+    "start": "npm run pong"
   },
   "dependencies": {
     "express": "4.17.1",

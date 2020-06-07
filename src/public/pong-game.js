@@ -4,8 +4,8 @@ import Ball from './ball.js';
 import {GAME_ACTION, GAME_STATE, MESSAGE} from './constants.js';
 import cfg from './config.js';
 
-// open the communications channel
-const socket = io();
+// configure the communications channel
+const socket = io({autoConnect: cfg.ONLINE_ENABLED});
 
 // Phaser game config
 new Phaser.Game({
@@ -58,6 +58,7 @@ let localPaddle;
 let remotePaddle;
 let robotEnabled = cfg.ROBOT_ENABLED;
 let perfMonEnabled = cfg.PERF_MON_ENABLED;
+let onlineEnabled = cfg.ONLINE_ENABLED;
 
 const backgroundTiles = [];
 const backgroundTints = [];
@@ -157,7 +158,7 @@ function create() {
     this.physics.world.on('worldbounds', () => wallHitSound.play()); // is emitted by the ball
 
     // keyboard mappings
-    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M, P');
+    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M, P, O');
 
     // font settings for the performance monitor
     const perfFont = 'PressStart2P'
@@ -175,19 +176,8 @@ function create() {
     // latency monitor
     latText = addText(this, perfXOffset, 30, 8, 'LAT 0', perfFont, perfFontColor).setOrigin(0).setDepth(1);
     latText.visible = perfMonEnabled;
-    socket.on(MESSAGE.LATENCY, (data) => {
-        latTotal += Date.now() - data.time;
-        latCount++;
-    });
 
-    // react to game state changes
-    socket.on(MESSAGE.GAME_STATE, (data) => handleGameStateMessage(data));
-
-    // react to remote player actions
-    socket.on(MESSAGE.ACTION, (data) => handleRemoteActionMessage(data));
-
-    // react to connection errors
-    socket.on(MESSAGE.CONNECT_ERROR, () => gameState = GAME_STATE.CONNECT);
+    configureSocketEvents();
 }
 
 //-- Called by the game engine for every frame drawn to the screen
@@ -265,6 +255,17 @@ function updateKeyState() {
     // toggle (m)usic on or off
     if (Phaser.Input.Keyboard.JustDown(keys.M)) {
         gameTune.isPlaying ? gameTune.pause() : gameTune.play();
+    }
+
+    // toggle (o)nline game play on or off
+    if (Phaser.Input.Keyboard.JustDown(keys.O)) {
+        onlineEnabled = !onlineEnabled;
+        if (socket.connected) {
+            socket.disconnect();
+        } else {
+            socket.open();
+            configureSocketEvents();
+        }
     }
 
     // register enter key presses
@@ -429,8 +430,10 @@ function playerScored(player) {
 }
 
 function emitMessage(type, data) {
-    mpsCount++;
-    socket.emit(type, data);
+    if (onlineEnabled) {
+        mpsCount++;
+        socket.emit(type, data);
+    }
 }
 
 function updateStats() {
@@ -530,4 +533,25 @@ function updateRobot() {
             }
             break;
     }
+}
+
+function configureSocketEvents() {
+    if (!onlineEnabled) {
+        return; // in offline mode we don't need the socket
+    }
+
+    // react to game state changes
+    socket.on(MESSAGE.GAME_STATE, (data) => handleGameStateMessage(data));
+
+    // react to remote player actions
+    socket.on(MESSAGE.ACTION, (data) => handleRemoteActionMessage(data));
+
+    // react to connection errors
+    socket.on(MESSAGE.CONNECT_ERROR, () => gameState = GAME_STATE.CONNECT);
+
+    // react to latency status messages
+    socket.on(MESSAGE.LATENCY, (data) => {
+        latTotal += Date.now() - data.time;
+        latCount++;
+    });
 }

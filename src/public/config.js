@@ -5,7 +5,8 @@ const GAME_CONFIG = {
     GAME_LENGTH: 10, // the number of points needed to win a game
     PADDLE_SPEED: 800,
     ROBOT_ENABLED: false,
-    PERF_MON_ENABLED: false // display performance statistics in the top left corner
+    PERF_MON_ENABLED: false, // display performance statistics in the top left corner
+    ONLINE_ENABLED: false
 }
 
 export default GAME_CONFIG;

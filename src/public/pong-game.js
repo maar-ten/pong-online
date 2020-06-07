@@ -157,7 +157,7 @@ function create() {
     this.physics.world.on('worldbounds', () => wallHitSound.play()); // is emitted by the ball
 
     // keyboard mappings
-    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M, P, L');
+    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M, P');
 
     // font settings for the performance monitor
     const perfFont = 'PressStart2P'
@@ -196,8 +196,7 @@ function update(time) {
 
     updateBallStatus(this);
     updateLocalPaddle();
-    updateEnterKeyState();
-    updateMusicKeyState();
+    updateKeyState();
 
     // update texts
     texts.update(gameState, playerNumber, servingPlayer);
@@ -206,8 +205,9 @@ function update(time) {
     if (robotEnabled && playerNumber === ROBOTIC_PLAYER_NUMBER) {
         updateRobot();
     }
+
     // update performance statistics
-    if (perfMonEnabled) updateStats();
+    updateStats();
 }
 
 // Registers ball flight sync issues and when one of the players scores a point
@@ -256,7 +256,18 @@ function updateLocalPaddle() {
     }
 }
 
-function updateEnterKeyState() {
+function updateKeyState() {
+    // toggle (p)erformance monitor on or off
+    if (Phaser.Input.Keyboard.JustDown(keys.P)) {
+        perfMonEnabled = !perfMonEnabled;
+    }
+
+    // toggle (m)usic on or off
+    if (Phaser.Input.Keyboard.JustDown(keys.M)) {
+        gameTune.isPlaying ? gameTune.pause() : gameTune.play();
+    }
+
+    // register enter key presses
     if (Phaser.Input.Keyboard.JustDown(keys.ENTER)) {
         switch (gameState) {
             case GAME_STATE.START:
@@ -277,12 +288,6 @@ function updateEnterKeyState() {
     }
 }
 
-function updateMusicKeyState() {
-    if (Phaser.Input.Keyboard.JustDown(keys.M)) {
-        gameTune.isPlaying ? gameTune.pause() : gameTune.play();
-    }
-}
-
 // Handle game state changes from the server
 function handleGameStateMessage(data) {
     gameState = data.state;
@@ -297,7 +302,6 @@ function handleGameStateMessage(data) {
 
         case GAME_STATE.START:
             setScoresAndPaddles(data);
-            perfMonEnabled = data.perfMonEnabled;
             robotEnabled = data.robotEnabled;
             break;
 
@@ -430,9 +434,15 @@ function emitMessage(type, data) {
 }
 
 function updateStats() {
+    if (perfMonEnabled) {
         updateFps();
         updateMps();
         updateLat();
+    } else {
+        fpsText.visible = false;
+        mpsText.visible = false;
+        latText.visible = false;
+    }
 }
 
 // The FPS displayed is averaged over a number of frames to make it less jittery

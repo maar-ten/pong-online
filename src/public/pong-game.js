@@ -11,18 +11,21 @@ const socket = io();
 new Phaser.Game({
     title: 'This is Pong!',
     version: 2,
-    banner: {
-        background: [
-            '#D32754',
-            '#2286D8',
-            '#FEA339',
-            '#FD5F3F'
-        ]
-    },
     type: Phaser.AUTO,
-    width: cfg.GAME_WIDTH,
-    height: cfg.GAME_HEIGHT,
-    pixelArt: true,
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: cfg.GAME_WIDTH,
+        height: cfg.GAME_HEIGHT,
+        min: {
+            width: 800,
+            height: 800 * .6
+        },
+        max: {
+            width: cfg.GAME_WIDTH,
+            height: cfg.GAME_HEIGHT
+        }
+    },
     physics: {
         default: 'arcade'
     },
@@ -33,6 +36,9 @@ new Phaser.Game({
     },
     audio: {
         disableWebAudio: true
+    },
+    banner: {
+        background: ['#D32754', '#2286D8', '#FEA339', '#FD5F3F']
     }
 });
 
@@ -151,7 +157,7 @@ function create() {
     this.physics.world.on('worldbounds', () => wallHitSound.play()); // is emitted by the ball
 
     // keyboard mappings
-    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M');
+    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M, P, L');
 
     // font settings for the performance monitor
     const perfFont = 'PressStart2P'
@@ -424,9 +430,9 @@ function emitMessage(type, data) {
 }
 
 function updateStats() {
-    updateFps();
-    updateMps();
-    updateLat();
+        updateFps();
+        updateMps();
+        updateLat();
 }
 
 // The FPS displayed is averaged over a number of frames to make it less jittery
@@ -479,7 +485,7 @@ function updateLat() {
     }
 }
 
-// Code for controlling one of the paddles automatically
+// Code for controlling the robotic player
 function updateRobot() {
 
     // move the paddle towards the ball

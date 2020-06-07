@@ -27,7 +27,6 @@ const players = [];
 let paddleHits = 0;
 let flightData = [];
 let robotEnabled = cfg.ROBOT_ENABLED;
-let perfMonEnabled = cfg.PERF_MON_ENABLED;
 
 // serve static game files from public folder
 app.use(express.static(join(__dirname, 'public')));
@@ -37,7 +36,6 @@ app.get('/pung', (req, res) => {
     const message = `
         Players connected: ${players.length}<br>
         Robotic player: ${robotEnabled ? 'on' : 'off'}<br>
-        Performance monitor: ${perfMonEnabled ? 'on' : 'off'}<br>
     `;
     console.info(message);
     res.send(message);
@@ -57,15 +55,6 @@ app.get('/pung-robot', (req, res) => {
     robotEnabled = !robotEnabled;
 
     const message = robotEnabled ? 'Player 2 is now a robot, beep boop.' : 'Player 2 is no longer a robot.';
-    console.info(message);
-    res.send(message);
-});
-
-// configure robot switch
-app.get('/pung-perfmon', (req, res) => {
-    perfMonEnabled = !perfMonEnabled;
-
-    const message = perfMonEnabled ? 'Performance monitor is now on.' : 'Performance monitor is now off.';
     console.info(message);
     res.send(message);
 });
@@ -269,8 +258,7 @@ function emitGameStateStart() {
             number: player.number,
             player1Score: getPlayerScore(1),
             player2Score: getPlayerScore(2),
-            robotEnabled: robotEnabled,
-            perfMonEnabled: perfMonEnabled
+            robotEnabled: robotEnabled
         });
     });
 }

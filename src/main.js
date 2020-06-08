@@ -14,7 +14,7 @@ import {dirname, join} from 'path';
 import crypto from 'crypto';
 
 import {GAME_ACTION, GAME_STATE, MESSAGE} from './public/constants.js';
-import cfg from './public/config.js';
+import GameState from './public/game-state.js';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -23,10 +23,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 
 // game state variables
-const players = [];
-let paddleHits = 0;
-let flightData = [];
-let robotEnabled = cfg.ROBOT_ENABLED;
+const gameState = new GameState();
+gameState.setRandomValueCallback((randomBuffer) => crypto.randomFillSync(randomBuffer));
+gameState.setGameStateChangeCallback((gameState) => emitGameStateChanges(gameState));
+gameState.setGameActionCallback((gameActionData) => emitGameActionData(gameActionData));
 
 // serve static game files from public folder
 app.use(express.static(join(__dirname, 'public')));
@@ -34,15 +34,15 @@ app.use(express.static(join(__dirname, 'public')));
 // configure status message
 app.get('/pung', (req, res) => {
     const message = `
-        Players connected: ${players.length}<br>
-        Robotic player: ${robotEnabled ? 'on' : 'off'}<br>
+        Players connected: ${gameState.players.length}<br>
+        Robotic player: ${gameState.robotEnabled ? 'on' : 'off'}<br>
     `;
     console.info(message);
     res.send(message);
 });
 
-// configure reset url
-app.get('/pung-reset', (req, res) => {
+// configure clearSession url
+app.get('/pung-clearSession', (req, res) => {
     resetSession();
 
     const message = 'Killed game session and server connections.';
@@ -52,9 +52,9 @@ app.get('/pung-reset', (req, res) => {
 
 // configure robot switch
 app.get('/pung-robot', (req, res) => {
-    robotEnabled = !robotEnabled;
+    gameState.robotEnabled = !gameState.robotEnabled;
 
-    const message = robotEnabled ? 'Player 2 is now a robot, beep boop.' : 'Player 2 is no longer a robot.';
+    const message = gameState.robotEnabled ? 'Player 2 is now a robot, beep boop.' : 'Player 2 is no longer a robot.';
     console.info(message);
     res.send(message);
 });
@@ -66,229 +66,89 @@ httpServer.listen(PORT, () => console.info(`Server online and listening on *:${P
 io.on(MESSAGE.CONNECTION, (socket) => {
 
     // deny new players when the maximum number of players is exceeded
-    if (players.length === 2) {
-        rejectPlayer(socket);
+    if (gameState.getSize() === 2) {
+        emitPlayerRejected(socket);
         return;
     }
 
     // add a new player to the session
-    const playerNumber = addPlayerToSession(socket.id);
+    const playerNumber = gameState.addPlayer(socket.id);
     console.info(`Player ${playerNumber} connected`);
 
-    if (players.length === 1) {
-        // one player connected, wait for the other one
-        emitGameStateWait(socket, playerNumber);
-    } else {
-        // both players connected, ask if they are ready to start
-        console.info('Both players connected. Changing state to start');
-        emitGameStateStart();
-    }
-
     // configure web socket events
-    socket.on(MESSAGE.READY, handlePlayerReady);
-    socket.on(MESSAGE.DISCONNECT, () => handleClientDisconnect(socket));
     socket.on(MESSAGE.ACTION, (data) => handleGameAction(socket, data));
+    socket.on(MESSAGE.DISCONNECT, () => handleClientDisconnect(socket));
     socket.on(MESSAGE.LATENCY, (data) => socket.emit(MESSAGE.LATENCY, data));
 });
 
-// Create and add a new player to the session
-function addPlayerToSession(socketId) {
-    const player = {};
-    player.id = socketId;
-    player.number = getNextPlayerNumber();
-    player.score = 0;
-    player.ready = false;
+function emitGameStateChanges(state) {
+    switch (state) {
+        case GAME_STATE.WAIT:
+            io.to(gameState.getWaitingPlayerId()).emit(MESSAGE.GAME_STATE, gameState.getGameStateData_Wait());
+            break;
 
-    players.push(player);
+        case GAME_STATE.START:
+            console.info('Both players connected. Changing state to start');
+            gameState.getPlayerIds().forEach(id => {
+                io.to(id).emit(MESSAGE.GAME_STATE, gameState.getGameStateData_Start(id));
+            });
+            break;
 
-    return player.number;
-}
+        case GAME_STATE.SERVE:
+            gameState.getPlayerIds().forEach(id => {
+                io.to(id).emit(MESSAGE.GAME_STATE, gameState.getGameStateData_Serve(id));
+            });
+            break;
 
-// Gracefully reject a player
-function rejectPlayer(socket) {
-    console.info('Maximum amount of players exceeded. Disconnecting new player.');
-    socket.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.SERVER_REJECT});
-    socket.disconnect(true);
-}
+        case GAME_STATE.PLAY:
+            io.emit(MESSAGE.GAME_STATE, gameState.getGameActionData_Play());
+            break;
 
-// When 2 players are ready the game state changes to serve
-function handlePlayerReady(data) {
-    getPlayerByNumber(data.player).ready = data.ready;
-    if (players.every(player => player.ready)) {
-        // both players are ready.
-        console.info('Both players are ready. Changing state to serve');
-        flightData = [];
-
-        // reset scores and ready state
-        players.forEach(player => {
-            player.score = 0;
-            player.ready = false;
-        });
-
-        const servingPlayer = getRandomIntInclusive(1, 2);
-        emitGameStateServe(servingPlayer, true);
+        case GAME_STATE.DONE:
+            io.emit(MESSAGE.GAME_STATE, gameState.getGameStateData_Done());
+            break;
     }
 }
 
-// When a client disconnects the other client is notified
+function emitGameActionData(data) {
+    switch (data.action) {
+        case GAME_ACTION.PADDLE_HIT:
+            io.emit(MESSAGE.ACTION, data);
+            break;
+    }
+}
+
+// When a client disconnects the player is removed and the other client is notified
 function handleClientDisconnect(socket) {
-    // delete player when their client disconnects
-    const player = getPlayerById(socket.id);
-    if (player) {
-        console.info(`Player ${player.number} disconnected`);
-        players.splice(players.indexOf(player), 1); // delete the player
-    }
-
-    // reset remaining player
-    players.forEach(player => {
-        player.ready = false;
-        //todo would be nice to keep the scores in case the other player left by accident
-        player.score = 0;
-        socket.broadcast.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.DISCONNECT});
-    });
+    const player = gameState.removePlayer(socket.id);
+    console.info(`Player ${player.number} disconnected`);
+    socket.broadcast.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.DISCONNECT});
+    //todo add socket close?
 }
 
 function handleGameAction(socket, data) {
     switch (data.action) {
-        case GAME_ACTION.SERVE:
-            const servingAngle = getServingAngle(data.player);
-
-            io.emit(MESSAGE.GAME_STATE, {
-                state: GAME_STATE.PLAY,
-                ballVelocity: 600,
-                ballAngle: servingAngle,
-                angleChange: getAngleChange(servingAngle)
-            });
-            break;
-
-        case GAME_ACTION.SCORE:
-            addPoint(data.player);
-            if (getPlayerByNumber(data.player).score === cfg.GAME_LENGTH) {
-                emitGameStateDone();
-            } else {
-                let nextServer = data.player === 2 ? 1 : 2;
-                emitGameStateServe(nextServer);
-            }
-            break;
-
         case GAME_ACTION.PADDLE_MOVE:
             // send to all clients except the sender
             socket.broadcast.emit(MESSAGE.ACTION, data);
             break;
 
-        case GAME_ACTION.PADDLE_HIT:
-            paddleHits++;
-            flightData.push(data.flightData);
-
-            if (flightData.length === 2) {
-                if (flightData[0].player === flightData[1].player || flightData[0].flightNumber !== flightData[1].flightNumber) {
-                    flightData = [];
-                }
-            }
-
-            if (paddleHits === 2) {
-                io.emit(MESSAGE.ACTION, {
-                    action: GAME_ACTION.PADDLE_HIT,
-                    angleChange: getAngleChange(data.currentAngle),
-                    flightData: flightData
-                });
-                paddleHits = 0;
-                flightData = [];
-            }
+        default:
+            gameState.handleGameAction(data);
             break;
     }
 }
 
-// Returns a number between min and max (inclusive)
-// Inspired by: https://stackoverflow.com/questions/18230217/javascript-generate-a-random-number-within-a-range-using-crypto-getrandomvalues#answer-42321673
-function getRandomIntInclusive(min, max) {
-    const randomBuffer = new Uint8Array(1);
-    crypto.randomFillSync(randomBuffer);
-    const randomNumber = randomBuffer[0] / (0xff + 1);
-    return Math.floor(randomNumber * (max - min + 1)) + min;
+function emitPlayerRejected(socket) {
+    console.info('Maximum amount of players exceeded. Disconnecting new player.');
+    socket.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.SERVER_REJECT});
+    socket.disconnect(true);
 }
 
-function getNextPlayerNumber() {
-    if (players.length === 0) {
-        return 1;
-    } else {
-        let numberAlreadyTaken = players[0].number;
-        return numberAlreadyTaken === 2 ? 1 : 2;
-    }
-}
-
-function getServingAngle(playerNumber) {
-    const direction = playerNumber === 1 ? 0 : 180;
-    return getRandomIntInclusive(-45, 45) + direction; // in degrees
-}
-
-function getAngleChange(currentAngle) {
-    const angleChange = getRandomIntInclusive(5, 15);
-    const direction = getRandomIntInclusive(0, 1) === 1 ? 1 : -1; // sets the direction up or down
-    return angleChange * direction; // in degrees
-}
-
-function addPoint(player) {
-    getPlayerByNumber(player).score++;
-}
-
-function getPlayerById(id) {
-    return players.find(player => player.id === id);
-}
-
-function getPlayerScore(number) {
-    return getPlayerByNumber(number).score;
-}
-
-function getPlayerByNumber(number) {
-    return players.find(player => player.number === number);
-}
-
-function emitGameStateWait(socket, playerNumber) {
-    socket.emit(MESSAGE.GAME_STATE, {
-        state: GAME_STATE.WAIT,
-        number: playerNumber
-    });
-}
-
-function emitGameStateStart() {
-    players.forEach(player => {
-        io.to(player.id).emit(MESSAGE.GAME_STATE, {
-            state: GAME_STATE.START,
-            number: player.number,
-            player1Score: getPlayerScore(1),
-            player2Score: getPlayerScore(2),
-            robotEnabled: robotEnabled
-        });
-    });
-}
-
-function emitGameStateServe(server, newGame = false) {
-    players.forEach(player => {
-        io.to(player.id).emit(MESSAGE.GAME_STATE, {
-            state: GAME_STATE.SERVE,
-            number: player.number,
-            server: server,
-            player1Score: getPlayerScore(1),
-            player2Score: getPlayerScore(2),
-            newGame: newGame
-        });
-    });
-}
-
-function emitGameStateDone() {
-    io.emit(MESSAGE.GAME_STATE, {
-        state: GAME_STATE.DONE,
-        player1Score: getPlayerScore(1),
-        player2Score: getPlayerScore(2)
-    });
-}
-
-// Disconnect players and reset session data
+// Disconnect players and clear session data
 function resetSession() {
-    players.forEach(player => io.sockets.connected[player.id].disconnect());
-    players.splice(0);
-    flightData = [];
+    gameState.getPlayerIds().forEach(player => io.sockets.connected[player.id].disconnect());
+    gameState.clearSession();
 }
 
 // remember to escape backslashes

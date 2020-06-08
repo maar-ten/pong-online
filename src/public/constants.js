@@ -6,12 +6,13 @@ export const GAME_STATE = {
     START: 'start',
     START_SERVE: 'start-serve',
     SERVE: 'serve',
-    SERVE_PLAY: 'serve-play',
+    SCORED: 'scored',
     PLAY: 'play',
     DONE: 'done'
 };
 
 export const GAME_ACTION = {
+    READY: 'ready',
     SERVE: 'serve',
     SCORE: 'score',
     PADDLE_MOVE: 'paddle-move',
@@ -21,9 +22,8 @@ export const GAME_ACTION = {
 export const MESSAGE = {
     GAME_STATE: 'game-state',
     ACTION: 'action',
-    READY: 'ready',
     CONNECTION: 'connection',
-    CONNECT_ERROR: 'connect_error',
+    CONNECT_ERROR: 'connect-error',
     DISCONNECT: 'disconnect',
     LATENCY: 'latency'
 }

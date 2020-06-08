@@ -177,7 +177,7 @@ function create() {
     latText = addText(this, perfXOffset, 30, 8, 'LAT 0', perfFont, perfFontColor).setOrigin(0).setDepth(1);
     latText.visible = perfMonEnabled;
 
-    configureSocketEvents();
+    openSocketAndConfigureEvents();
 }
 
 //-- Called by the game engine for every frame drawn to the screen
@@ -219,12 +219,12 @@ function updateBallStatus(scene) {
     if (gameState === GAME_STATE.PLAY) {
         // ball exits to the right (player 1 scores)
         if (ball.x - ball.width / 2 > cfg.GAME_WIDTH) {
-            playerScored(1);
+            emitPlayerScored(1);
         }
 
         // ball exits to the left (player 2 scores)
         if (ball.x + ball.width / 2 < 0) {
-            playerScored(2);
+            emitPlayerScored(2);
         }
     }
 }
@@ -264,7 +264,7 @@ function updateKeyState() {
             socket.disconnect();
         } else {
             socket.open();
-            configureSocketEvents();
+            openSocketAndConfigureEvents();
         }
     }
 
@@ -375,6 +375,7 @@ function emitPaddleMoved() {
     if (localPaddleFrames >= LOCAL_PADDLE_FRAMES_THRESHOLD && localPaddleDy >= LOCAL_PADDLE_Y_THRESHOLD) {
         emitMessage(MESSAGE.ACTION, {
             action: GAME_ACTION.PADDLE_MOVE,
+            player: playerNumber,
             y: localPaddle.y
         });
 
@@ -409,24 +410,25 @@ function emitPaddleHit() {
 
 function emitPlayerReady(playerNumber) {
     gameState = GAME_STATE.START_SERVE;
-    emitMessage(MESSAGE.READY, {
-        player: playerNumber,
-        ready: true
+    emitMessage(MESSAGE.ACTION, {
+        action: GAME_ACTION.READY,
+        player: playerNumber
     });
 }
 
 // Emit a message and reset game state
-function playerScored(player) {
+function emitPlayerScored(player) {
+    ballOutSound.play();
+    ball.reset();
+    servingPlayer = undefined;
+    gameState = GAME_STATE.SCORED;
+
     if (playerNumber === player) {
         emitMessage(MESSAGE.ACTION, {
             action: GAME_ACTION.SCORE,
             player: playerNumber
         });
     }
-    ballOutSound.play();
-    ball.reset();
-    servingPlayer = undefined;
-    gameState = GAME_STATE.SERVE_PLAY;
 }
 
 function emitMessage(type, data) {
@@ -535,7 +537,7 @@ function updateRobot() {
     }
 }
 
-function configureSocketEvents() {
+function openSocketAndConfigureEvents() {
     if (!onlineEnabled) {
         return; // in offline mode we don't need the socket
     }

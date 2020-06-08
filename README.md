@@ -47,6 +47,10 @@ Then start the server using `nohup node src/main.js &`. After that, if you leave
 
 Send the url of the server to your friend and have some fun! 🏓
 
+Game States
+---
+![Game State Diagram](src/public/assets/images/game-state-diagram.svg)
+
 
 License
 ---

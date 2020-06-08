@@ -72,8 +72,7 @@ io.on(MESSAGE.CONNECTION, (socket) => {
     }
 
     // add a new player to the session
-    const playerNumber = gameState.addPlayer(socket.id);
-    console.info(`Player ${playerNumber} connected`);
+    gameState.addPlayer(socket.id);
 
     // configure web socket events
     socket.on(MESSAGE.ACTION, (data) => handleGameAction(socket, data));

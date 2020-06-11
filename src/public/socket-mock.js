@@ -28,7 +28,6 @@ export class SocketMock {
 
     // used by the client to send data to the server
     emit(eventName, data) {
-        console.log(eventName, data);
         switch (eventName) {
             case MESSAGE.ACTION:
                 this.gameSession.handleGameAction(data);
@@ -57,7 +56,6 @@ export class SocketMock {
 
     // callback to handle state changes send by the GameSession
     _onGameStateChange(state) {
-        console.log('state:', state);
         let data;
 
         switch (state) {

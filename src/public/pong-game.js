@@ -315,7 +315,6 @@ function updateKeyState() {
 
 // Handle game state changes from the server
 function handleGameStateMessage(data) {
-    console.log(data);
     gameState = data.state;
     ball.reset();
     ball.setVelocity(0, 0);

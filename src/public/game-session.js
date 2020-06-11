@@ -1,7 +1,7 @@
 import cfg from './config.js';
 import {GAME_ACTION, GAME_STATE} from './constants.js';
 
-export default class GameState {
+export default class GameSession {
 
     constructor() {
         this.gameState = GAME_STATE.START;
@@ -9,6 +9,7 @@ export default class GameState {
         this.servingPlayer = 1;
         this.newGame = true;
         this.paddleHits = 0;
+        this.paddleHitsMax = 0;
         this.flightData = [];
         this.robotEnabled = cfg.ROBOT_ENABLED;
     }
@@ -40,7 +41,7 @@ export default class GameState {
     addPlayer(id) {
         const player = {};
         player.id = id;
-        player.number = getNextPlayerNumber.call(this);
+        player.number = this._getNextPlayerNumber();
         player.score = 0;
         player.ready = false;
 
@@ -62,21 +63,21 @@ export default class GameState {
     }
 
     addReadyPlayer(number) {
-        const player = getPlayerByNumber.call(this, number);
+        const player = this._getPlayerByNumber(number);
         player.ready = true;
         player.score = 0;
 
         if (this.players.every(player => player.ready)) {
             // both players are ready, change state to serving
             this.flightData = [];
-            this.servingPlayer = getRandomIntInclusive.call(this, 1, 2);
+            this.servingPlayer = this._getRandomIntInclusive(1, 2);
             this.newGame = true;
             this.emitGameState(GAME_STATE.SERVE);
         }
     }
 
     addPoint(playerNumber) {
-        const player = getPlayerByNumber.call(this, playerNumber);
+        const player = this._getPlayerByNumber(playerNumber);
         player.score++;
 
         if (this.isGameOver()) {
@@ -92,6 +93,7 @@ export default class GameState {
 
     addPaddleHit(flightData) {
         this.paddleHits++;
+        this.paddleHitsMax = Math.max(this.paddleHitsMax, this.paddleHits);
         this.flightData.push(flightData);
 
         function flightDataCorrupt() {
@@ -144,39 +146,39 @@ export default class GameState {
     getGameStateData_Serve(playerId) {
         return {
             state: GAME_STATE.SERVE,
-            number: getPlayerById.call(this, playerId).number,
+            number: this._getPlayerById(playerId).number,
             server: this.servingPlayer,
-            player1Score: getPlayerScore.call(this, 1),
-            player2Score: getPlayerScore.call(this, 2),
+            player1Score: this._getPlayerScore(1),
+            player2Score: this._getPlayerScore(2),
             newGame: this.newGame
-        }
+        };
     }
 
     getGameStateData_Start(playerId) {
         return {
             state: GAME_STATE.START,
-            number: getPlayerById.call(this, playerId).number,
-            player1Score: getPlayerScore.call(this, 1),
-            player2Score: getPlayerScore.call(this, 2),
+            number: this._getPlayerById(playerId).number,
+            player1Score: this._getPlayerScore(1),
+            player2Score: this._getPlayerScore(2),
             robotEnabled: this.robotEnabled
-        }
+        };
     }
 
     getGameStateData_Done() {
         return {
             state: GAME_STATE.DONE,
-            player1Score: getPlayerScore.call(this, 1),
-            player2Score: getPlayerScore.call(this, 2)
+            player1Score: this._getPlayerScore(1),
+            player2Score: this._getPlayerScore(2),
+            paddleHitsMax: this.paddleHitsMax
         };
     }
 
-    getGameActionData_Play() {
-        const servingAngle = getServingAngle.call(this, this.servingPlayer);
+    getGameStateData_Play() {
         return {
             state: GAME_STATE.PLAY,
             ballVelocity: 600,
-            ballAngle: servingAngle,
-            angleChange: getAngleChange.call(this, servingAngle)
+            ballAngle: this._getServingAngle(this.servingPlayer),
+            angleChange: this._getAngleChange()
         };
     }
 
@@ -184,7 +186,7 @@ export default class GameState {
         if (this.flightData.length === 2) {
             const data = {
                 action: GAME_ACTION.PADDLE_HIT,
-                angleChange: getAngleChange.call(this),
+                angleChange: this._getAngleChange(),
                 flightData: this.flightData
             };
 
@@ -196,7 +198,7 @@ export default class GameState {
     }
 
     removePlayer(id) {
-        const player = getPlayerById.call(this, id);
+        const player = this._getPlayerById(id);
         this.players.splice(this.players.indexOf(player), 1); // delete the player
 
         // reset game for remaining player
@@ -216,7 +218,8 @@ export default class GameState {
             player.ready = 0;
             player.score = 0;
         });
-        this.paddleHits = 0
+        this.paddleHits = 0;
+        this.paddleHitsMax = 0;
         this.newGame = true;
     }
 
@@ -225,45 +228,45 @@ export default class GameState {
         this.resetGame();
         this.players.splice(0);
     }
-}
 
-function getPlayerScore(number) {
-    return getPlayerByNumber.call(this, number).score;
-}
-
-function getNextPlayerNumber() {
-    if (this.players.length === 0) {
-        return 1;
-    } else {
-        const numberAlreadyTaken = this.players[0].number;
-        return numberAlreadyTaken === 2 ? 1 : 2;
+    _getPlayerScore(number) {
+        return this._getPlayerByNumber(number).score;
     }
-}
 
-function getPlayerById(id) {
-    return this.players.find(player => player.id === id);
-}
+    _getNextPlayerNumber() {
+        if (this.players.length === 0) {
+            return 1;
+        } else {
+            const numberAlreadyTaken = this.players[0].number;
+            return numberAlreadyTaken === 2 ? 1 : 2;
+        }
+    }
 
-function getPlayerByNumber(number) {
-    return this.players.find(player => player.number === number);
-}
+    _getPlayerById(id) {
+        return this.players.find(player => player.id === id);
+    }
 
-// Returns a number between min and max (inclusive)
-// Inspired by: https://stackoverflow.com/questions/18230217/javascript-generate-a-random-number-within-a-range-using-crypto-getrandomvalues#answer-42321673
-function getRandomIntInclusive(min, max) {
-    const randomBuffer = new Uint8Array(1);
-    this.crypto(randomBuffer);
-    const randomNumber = randomBuffer[0] / (0xff + 1);
-    return Math.floor(randomNumber * (max - min + 1)) + min;
-}
+    _getPlayerByNumber(number) {
+        return this.players.find(player => player.number === number);
+    }
 
-function getServingAngle(playerNumber) {
-    const direction = playerNumber === 1 ? 0 : 180;
-    return getRandomIntInclusive.call(this, -45, 45) + direction; // in degrees
-}
+    // Returns a number between min and max (inclusive)
+    // Inspired by: https://stackoverflow.com/questions/18230217/javascript-generate-a-random-number-within-a-range-using-crypto-getrandomvalues#answer-42321673
+    _getRandomIntInclusive(min, max) {
+        const randomBuffer = new Uint8Array(1);
+        this.crypto(randomBuffer);
+        const randomNumber = randomBuffer[0] / (0xff + 1);
+        return Math.floor(randomNumber * (max - min + 1)) + min;
+    }
 
-function getAngleChange() {
-    const angleChange = getRandomIntInclusive.call(this, 5, 15);
-    const direction = getRandomIntInclusive.call(this, 0, 1) === 1 ? 1 : -1; // sets the direction up or down
-    return angleChange * direction; // in degrees
+    _getServingAngle(playerNumber) {
+        const direction = playerNumber === 1 ? 0 : 180;
+        return this._getRandomIntInclusive(-45, 45) + direction; // in degrees
+    }
+
+    _getAngleChange() {
+        const angleChange = this._getRandomIntInclusive(5, 15);
+        const direction = this._getRandomIntInclusive(0, 1) === 1 ? 1 : -1; // sets the direction up or down
+        return angleChange * direction; // in degrees
+    }
 }

@@ -14,7 +14,7 @@ import {dirname, join} from 'path';
 import crypto from 'crypto';
 
 import {GAME_ACTION, GAME_STATE, MESSAGE} from './public/constants.js';
-import GameState from './public/game-state.js';
+import GameSession from './public/game-session.js';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -23,10 +23,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 
 // game state variables
-const gameState = new GameState();
-gameState.setRandomValueCallback((randomBuffer) => crypto.randomFillSync(randomBuffer));
-gameState.setGameStateChangeCallback((gameState) => emitGameStateChanges(gameState));
-gameState.setGameActionCallback((gameActionData) => emitGameActionData(gameActionData));
+const gameSession = new GameSession();
+gameSession.setRandomValueCallback((randomBuffer) => crypto.randomFillSync(randomBuffer));
+gameSession.setGameStateChangeCallback((gameState) => emitGameStateChanges(gameState));
+gameSession.setGameActionCallback((gameActionData) => emitGameActionData(gameActionData));
 
 // serve static game files from public folder
 app.use(express.static(join(__dirname, 'public')));
@@ -34,8 +34,8 @@ app.use(express.static(join(__dirname, 'public')));
 // configure status message
 app.get('/pung', (req, res) => {
     const message = `
-        Players connected: ${gameState.players.length}<br>
-        Robotic player: ${gameState.robotEnabled ? 'on' : 'off'}<br>
+        Players connected: ${gameSession.players.length}<br>
+        Robotic player: ${gameSession.robotEnabled ? 'on' : 'off'}<br>
     `;
     console.info(message);
     res.send(message);
@@ -52,9 +52,9 @@ app.get('/pung-clearSession', (req, res) => {
 
 // configure robot switch
 app.get('/pung-robot', (req, res) => {
-    gameState.robotEnabled = !gameState.robotEnabled;
+    gameSession.robotEnabled = !gameSession.robotEnabled;
 
-    const message = gameState.robotEnabled ? 'Player 2 is now a robot, beep boop.' : 'Player 2 is no longer a robot.';
+    const message = gameSession.robotEnabled ? 'Player 2 is now a robot, beep boop.' : 'Player 2 is no longer a robot.';
     console.info(message);
     res.send(message);
 });
@@ -66,13 +66,13 @@ httpServer.listen(PORT, () => console.info(`Server online and listening on *:${P
 io.on(MESSAGE.CONNECTION, (socket) => {
 
     // deny new players when the maximum number of players is exceeded
-    if (gameState.getSize() === 2) {
+    if (gameSession.getSize() === 2) {
         emitPlayerRejected(socket);
         return;
     }
 
     // add a new player to the session
-    gameState.addPlayer(socket.id);
+    gameSession.addPlayer(socket.id);
 
     // configure web socket events
     socket.on(MESSAGE.ACTION, (data) => handleGameAction(socket, data));
@@ -83,28 +83,28 @@ io.on(MESSAGE.CONNECTION, (socket) => {
 function emitGameStateChanges(state) {
     switch (state) {
         case GAME_STATE.WAIT:
-            io.to(gameState.getWaitingPlayerId()).emit(MESSAGE.GAME_STATE, gameState.getGameStateData_Wait());
+            io.to(gameSession.getWaitingPlayerId()).emit(MESSAGE.GAME_STATE, gameSession.getGameStateData_Wait());
             break;
 
         case GAME_STATE.START:
             console.info('Both players connected. Changing state to start');
-            gameState.getPlayerIds().forEach(id => {
-                io.to(id).emit(MESSAGE.GAME_STATE, gameState.getGameStateData_Start(id));
+            gameSession.getPlayerIds().forEach(id => {
+                io.to(id).emit(MESSAGE.GAME_STATE, gameSession.getGameStateData_Start(id));
             });
             break;
 
         case GAME_STATE.SERVE:
-            gameState.getPlayerIds().forEach(id => {
-                io.to(id).emit(MESSAGE.GAME_STATE, gameState.getGameStateData_Serve(id));
+            gameSession.getPlayerIds().forEach(id => {
+                io.to(id).emit(MESSAGE.GAME_STATE, gameSession.getGameStateData_Serve(id));
             });
             break;
 
         case GAME_STATE.PLAY:
-            io.emit(MESSAGE.GAME_STATE, gameState.getGameActionData_Play());
+            io.emit(MESSAGE.GAME_STATE, gameSession.getGameStateData_Play());
             break;
 
         case GAME_STATE.DONE:
-            io.emit(MESSAGE.GAME_STATE, gameState.getGameStateData_Done());
+            io.emit(MESSAGE.GAME_STATE, gameSession.getGameStateData_Done());
             break;
     }
 }
@@ -119,7 +119,7 @@ function emitGameActionData(data) {
 
 // When a client disconnects the player is removed and the other client is notified
 function handleClientDisconnect(socket) {
-    const player = gameState.removePlayer(socket.id);
+    const player = gameSession.removePlayer(socket.id);
     console.info(`Player ${player.number} disconnected`);
     socket.broadcast.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.DISCONNECT});
     //todo add socket close?
@@ -133,7 +133,7 @@ function handleGameAction(socket, data) {
             break;
 
         default:
-            gameState.handleGameAction(data);
+            gameSession.handleGameAction(data);
             break;
     }
 }
@@ -146,8 +146,8 @@ function emitPlayerRejected(socket) {
 
 // Disconnect players and clear session data
 function resetSession() {
-    gameState.getPlayerIds().forEach(player => io.sockets.connected[player.id].disconnect());
-    gameState.clearSession();
+    gameSession.getPlayerIds().forEach(player => io.sockets.connected[player.id].disconnect());
+    gameSession.clearSession();
 }
 
 // remember to escape backslashes

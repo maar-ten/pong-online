@@ -3,9 +3,10 @@ import Paddle from './paddle.js';
 import Ball from './ball.js';
 import {GAME_ACTION, GAME_STATE, MESSAGE} from './constants.js';
 import cfg from './config.js';
+import {SocketMock} from './socket-mock.js';
 
 // configure the communications channel
-const socket = io({autoConnect: cfg.ONLINE_ENABLED});
+const socket = new SocketMock();
 
 // Phaser game config
 new Phaser.Game({
@@ -42,10 +43,10 @@ new Phaser.Game({
     }
 });
 
-// assets
+// game objects and input configuration
 let paddleLeft, paddleRight, ball;    // sprites
 let wallHitSound, ballOutSound;       // sounds
-let gameTune                          // music
+let gameTune;                          // music
 let texts, fpsText, mpsText, latText; // texts
 let keys;                             // key bindings
 
@@ -83,12 +84,12 @@ let fpsTime = 0;
 let fpsCount = 0;
 
 // messages rate (message per second)
-const MPS_TIME_THRESHOLD = 3000 // average the mps calculation over this amount of milliseconds
+const MPS_TIME_THRESHOLD = 3000; // average the mps calculation over this amount of milliseconds
 let mpsTime = 0;
 let mpsCount = 0;
 
 // network latency (milliseconds)
-const LAT_COUNT_THRESHOLD = 3 // average the latency calculation over this amount of measurements
+const LAT_COUNT_THRESHOLD = 3; // average the latency calculation over this amount of measurements
 const LAT_INTERVAL = 1; // number of seconds between latency measurements
 let latTime = 0;
 let latTotal = 0;
@@ -161,7 +162,7 @@ function create() {
     keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M, P, O');
 
     // font settings for the performance monitor
-    const perfFont = 'PressStart2P'
+    const perfFont = 'PressStart2P';
     const perfFontColor = '#00ff00aa';
     const perfXOffset = 10;
 
@@ -185,16 +186,14 @@ function update(time) {
     gameTime = time;
 
     updateBallStatus(this);
-    updateLocalPaddle();
+    updatePaddles();
     updateKeyState();
 
     // update texts
     texts.update(gameState, playerNumber, servingPlayer);
 
     // enable robotic paddle for robotic player
-    if (robotEnabled && playerNumber === ROBOTIC_PLAYER_NUMBER) {
-        updateRobot();
-    }
+    updateRobot();
 
     // update performance statistics
     updateStats();
@@ -229,8 +228,10 @@ function updateBallStatus(scene) {
     }
 }
 
-function updateLocalPaddle() {
-    if (localPaddle) {
+function updatePaddles() {
+
+    // when playing online the player can use both W/S and up/down to control the local paddle
+    if (localPaddle && onlineEnabled) {
         // react to keyboard presses
         if (keys.UP.isDown || keys.W.isDown) {
             localPaddle.body.setVelocityY(-cfg.PADDLE_SPEED);
@@ -244,20 +245,43 @@ function updateLocalPaddle() {
         localPaddleFrames++;
         emitPaddleMoved();
     }
+
+    // when playing offline W/S are assigned to the left paddle and up/down to the right paddle
+    if (!onlineEnabled) {
+        // react to keyboard presses
+        if (keys.W.isDown) {
+            paddleLeft.body.setVelocityY(-cfg.PADDLE_SPEED);
+        } else if (keys.S.isDown) {
+            paddleLeft.body.setVelocityY(cfg.PADDLE_SPEED);
+        } else {
+            paddleLeft.body.setVelocityY(0);
+        }
+
+        // when the robot is enabled up/down are not used
+        if (!robotEnabled) {
+            if (keys.UP.isDown) {
+                paddleRight.body.setVelocityY(-cfg.PADDLE_SPEED);
+            } else if (keys.DOWN.isDown) {
+                paddleRight.body.setVelocityY(cfg.PADDLE_SPEED);
+            } else {
+                paddleRight.body.setVelocityY(0);
+            }
+        }
+    }
 }
 
 function updateKeyState() {
-    // toggle (p)erformance monitor on or off
+    // [p] toggles the performance monitor on or off
     if (Phaser.Input.Keyboard.JustDown(keys.P)) {
         perfMonEnabled = !perfMonEnabled;
     }
 
-    // toggle (m)usic on or off
+    // [m] toggles the music on or off
     if (Phaser.Input.Keyboard.JustDown(keys.M)) {
         gameTune.isPlaying ? gameTune.pause() : gameTune.play();
     }
 
-    // toggle (o)nline game play on or off
+    // [o] toggles online game play on or off
     if (Phaser.Input.Keyboard.JustDown(keys.O)) {
         onlineEnabled = !onlineEnabled;
         if (socket.connected) {
@@ -268,7 +292,7 @@ function updateKeyState() {
         }
     }
 
-    // register enter key presses
+    // [enter] advances the player through different the game states
     if (Phaser.Input.Keyboard.JustDown(keys.ENTER)) {
         switch (gameState) {
             case GAME_STATE.START:
@@ -278,7 +302,7 @@ function updateKeyState() {
                 break;
 
             case GAME_STATE.SERVE:
-                if (servingPlayer === playerNumber) {
+                if (servingPlayer === playerNumber || !onlineEnabled) {
                     emitMessage(MESSAGE.ACTION, {
                         action: GAME_ACTION.SERVE,
                         player: playerNumber
@@ -291,6 +315,7 @@ function updateKeyState() {
 
 // Handle game state changes from the server
 function handleGameStateMessage(data) {
+    console.log(data);
     gameState = data.state;
     ball.reset();
     ball.setVelocity(0, 0);
@@ -307,7 +332,7 @@ function handleGameStateMessage(data) {
             break;
 
         case GAME_STATE.SERVE:
-            texts.resetPaddleHits(data.newGame);
+            texts.resetPaddleHits();
             setScoresAndPaddles(data);
             servingPlayer = data.server;
             break;
@@ -423,19 +448,17 @@ function emitPlayerScored(player) {
     servingPlayer = undefined;
     gameState = GAME_STATE.SCORED;
 
-    if (playerNumber === player) {
+    if (playerNumber === player || !onlineEnabled) {
         emitMessage(MESSAGE.ACTION, {
             action: GAME_ACTION.SCORE,
-            player: playerNumber
+            player: player
         });
     }
 }
 
 function emitMessage(type, data) {
-    if (onlineEnabled) {
-        mpsCount++;
-        socket.emit(type, data);
-    }
+    mpsCount++;
+    socket.emit(type, data);
 }
 
 function updateStats() {
@@ -502,9 +525,12 @@ function updateLat() {
 
 // Code for controlling the robotic player
 function updateRobot() {
+    if (!robotEnabled || (onlineEnabled && playerNumber !== ROBOTIC_PLAYER_NUMBER)) {
+        return;
+    }
 
     // move the paddle towards the ball
-    const dy = Math.abs(localPaddle.y - ball.y)
+    const dy = Math.abs(localPaddle.y - ball.y);
     if (dy > 10) {
         const speed = cfg.PADDLE_SPEED * .9;
         const direction = localPaddle.y < ball.y ? 1 : -1;
@@ -538,10 +564,6 @@ function updateRobot() {
 }
 
 function openSocketAndConfigureEvents() {
-    if (!onlineEnabled) {
-        return; // in offline mode we don't need the socket
-    }
-
     // react to game state changes
     socket.on(MESSAGE.GAME_STATE, (data) => handleGameStateMessage(data));
 
@@ -556,4 +578,6 @@ function openSocketAndConfigureEvents() {
         latTotal += Date.now() - data.time;
         latCount++;
     });
+
+    socket.open();
 }

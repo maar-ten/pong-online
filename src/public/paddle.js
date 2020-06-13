@@ -1,6 +1,5 @@
 import cfg from './config.js';
 
-const PADDLE_WIDTH = 15;
 const PADDLE_HEIGHT = 100;
 
 export default class Paddle extends Phaser.GameObjects.Image {

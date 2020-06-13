@@ -138,7 +138,7 @@ function create() {
                 .setOrigin(0).setTint(0x2286D8));
         }
     }
-    backgroundTints.push(0x7422d8, 0xd87422, 0x86d822, 0x2286D8);
+    backgroundTints.push(0x86d822, 0xd87422, 0xd8cf22, 0x2286D8);
 
     // texts
     texts = new Texts(this, cfg.GAME_HEIGHT, screenCenterX);
@@ -150,7 +150,6 @@ function create() {
     // create ball and add the paddles as colliders
     const paddleHitSound = this.sound.add('paddle-hit');
     ball = new Ball(this, screenCenterX, screenCenterY, 'ball');
-    ball.body.setAngularVelocity(150);
     ball.addCollider(paddleLeft, paddleHitSound, emitPaddleHit);
     ball.addCollider(paddleRight, paddleHitSound, emitPaddleHit);
 
@@ -317,7 +316,6 @@ function updateKeyState() {
 function handleGameStateMessage(data) {
     gameState = data.state;
     ball.reset();
-    ball.setVelocity(0, 0);
 
     switch (data.state) {
         case GAME_STATE.WAIT:
@@ -331,7 +329,7 @@ function handleGameStateMessage(data) {
             break;
 
         case GAME_STATE.SERVE:
-            texts.resetPaddleHits();
+            texts.resetPaddleHits(data.newGame);
             setScoresAndPaddles(data);
             servingPlayer = data.server;
             break;

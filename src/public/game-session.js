@@ -4,7 +4,6 @@ import {GAME_ACTION, GAME_STATE} from './constants.js';
 export default class GameSession {
 
     constructor() {
-        this.gameState = GAME_STATE.START;
         this.players = [];
         this.servingPlayer = 1;
         this.newGame = true;
@@ -29,11 +28,6 @@ export default class GameSession {
         this.gameActionCallback = callback;
     }
 
-    emitGameState(gameState) {
-        this.gameState = gameState;
-        this.gameStateCallback(gameState);
-    }
-
     getSize() {
         return this.players.length;
     }
@@ -49,10 +43,10 @@ export default class GameSession {
 
         if (this.getSize() === 2) {
             // both players connected, ask if they are ready to start
-            this.emitGameState(GAME_STATE.START);
+            this._emitGameState(GAME_STATE.START);
         } else {
             // one player connected, wait for the other one
-            this.emitGameState(GAME_STATE.WAIT);
+            this._emitGameState(GAME_STATE.WAIT);
         }
 
         return player.number;
@@ -72,7 +66,7 @@ export default class GameSession {
             this.flightData = [];
             this.servingPlayer = this._getRandomIntInclusive(1, 2);
             this.newGame = true;
-            this.emitGameState(GAME_STATE.SERVE);
+            this._emitGameState(GAME_STATE.SERVE);
         }
     }
 
@@ -80,14 +74,14 @@ export default class GameSession {
         const player = this._getPlayerByNumber(playerNumber);
         player.score++;
 
-        if (this.isGameOver()) {
-            this.emitGameState(GAME_STATE.DONE);
-            this.resetGame(); // don't reset the game before emitting DONE
+        if (this._isGameOver()) {
+            this._emitGameState(GAME_STATE.DONE);
+            this._resetGame(); // don't reset the game before emitting DONE
         } else {
+            this.newGame = false;
             this.flightData = [];
             this.servingPlayer = player.number === 2 ? 1 : 2;
-            this.newGame = true;
-            this.emitGameState(GAME_STATE.SERVE);
+            this._emitGameState(GAME_STATE.SERVE);
         }
     }
 
@@ -123,7 +117,7 @@ export default class GameSession {
                 break;
 
             case GAME_ACTION.SERVE:
-                this.emitGameState(GAME_STATE.PLAY);
+                this._emitGameState(GAME_STATE.PLAY);
                 break;
 
             case GAME_ACTION.SCORE:
@@ -202,17 +196,27 @@ export default class GameSession {
         this.players.splice(this.players.indexOf(player), 1); // delete the player
 
         // reset game for remaining player
-        this.resetGame();
+        this._resetGame();
 
         return player;
     }
 
-    isGameOver() {
+    // clear all session information
+    clearSession() {
+        this._resetGame();
+        this.players.splice(0);
+    }
+
+    _emitGameState(gameState) {
+        this.gameStateCallback(gameState);
+    }
+
+    _isGameOver() {
         return this.players.some(player => player.score === cfg.GAME_LENGTH);
     }
 
     // keep the players, but reset all other info
-    resetGame() {
+    _resetGame() {
         this.flightData = [];
         this.players.forEach(player => {
             player.ready = 0;
@@ -221,12 +225,6 @@ export default class GameSession {
         this.paddleHits = 0;
         this.paddleHitsMax = 0;
         this.newGame = true;
-    }
-
-    // clear all session information
-    clearSession() {
-        this.resetGame();
-        this.players.splice(0);
     }
 
     _getPlayerScore(number) {

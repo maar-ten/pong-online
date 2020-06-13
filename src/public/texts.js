@@ -11,15 +11,19 @@ export default class Texts {
         this.subtitle = addText(scene, screenCenterX, screenHeight / 10 + 60, 24, 'Press Enter to Play !');
         this.player1ScoreText = addText(scene, screenCenterX - 100, screenHeight / 3, 84, 0);
         this.player2ScoreText = addText(scene, screenCenterX + 100, screenHeight / 3, 84, 0);
-        this.gameStats = addText(scene, screenCenterX, screenHeight * .64, 24, 'Press M for some music').setAlign('center');
+        this.infoText = addText(scene, screenCenterX, screenHeight * .64, 24, 'Press M for some music').setAlign('center');
         this.previousGameState = 0;
         this.paddleHits = 0;
         this.paddleHitsMax = 0;
 
-        // move the scoreboard out of the way when playing
+        // create a tween to move the scoreboard out of the way when playing
         this.scoreBoardDown = true;
         this.moveScoreBoardUp = tweenScoreBoard.call(this, scene, 55, false, 500);
-        this.moveScoreBoardDown = tweenScoreBoard.call(this, scene, this.player1ScoreText.y, true, 1);
+        this.moveScoreBoardDown = tweenScoreBoard.call(this, scene, this.player1ScoreText.y, true, 500)
+            .on('complete', () => {
+                this.title.visible = true;
+                this.subtitle.visible = true;
+            });
     }
 
     setPlayer1Score(score) {
@@ -48,48 +52,35 @@ export default class Texts {
 
         if (!this.scoreBoardDown) {
             this.moveScoreBoardDown.play();
+            // the tween will also make title and subtitle visible
         }
 
         switch (gameState) {
             case GAME_STATE.CONNECT:
                 this.title.text = 'This is Pong !';
                 this.subtitle.text = 'Connecting to server . . .';
-                this.title.visible = true;
-                this.subtitle.visible = true;
-                this.gameStats.visible = true;
                 break;
 
             case GAME_STATE.SERVER_REJECT:
                 this.title.text = 'This is Pong !';
                 this.subtitle.text = 'No more room on server';
-                this.title.visible = true;
-                this.subtitle.visible = true;
-                this.gameStats.visible = true;
                 break;
 
             case GAME_STATE.WAIT:
             case GAME_STATE.DISCONNECT:
                 this.title.text = 'This is Pong !';
                 this.subtitle.text = 'Waiting For Other Player . . .';
-                this.title.visible = true;
-                this.subtitle.visible = true;
-                this.gameStats.visible = true;
                 break;
 
             case GAME_STATE.START:
                 let direction = playerNumber === 1 ? '<- Your Side' : 'Your Side ->';
                 this.title.text = `${direction}`;
                 this.subtitle.text = 'Press Enter When Ready !';
-                this.title.visible = true;
-                this.subtitle.visible = true;
-                this.gameStats.visible = true;
                 break;
 
             case GAME_STATE.START_SERVE:
                 this.subtitle.text = 'Waiting For Other Player . . .';
                 this.title.visible = false;
-                this.subtitle.visible = true;
-                this.gameStats.visible = true;
                 break;
 
             case GAME_STATE.SERVE:
@@ -102,15 +93,13 @@ export default class Texts {
                     this.subtitle.text = 'Here Comes the Serve !';
                 }
 
-                this.title.visible = true;
-                this.subtitle.visible = true;
-                this.gameStats.visible = false;
+                this.infoText.visible = false;
                 break;
 
             case GAME_STATE.PLAY:
                 this.title.visible = false;
                 this.subtitle.visible = false;
-                this.gameStats.visible = false;
+                this.infoText.visible = false;
 
                 if (this.scoreBoardDown) {
                     this.moveScoreBoardUp.play();
@@ -123,14 +112,9 @@ export default class Texts {
                 const text = winner === playerNumber ? 'Win' : 'Lose';
                 this.title.text = `You ${text}!`;
                 this.subtitle.text = 'Press Enter to Play !';
-                this.gameStats.text = `The longest rally was ${this.paddleHitsMax} hits\n${getGameResult(this.paddleHitsMax)}`;
-                this.title.visible = true;
-                this.subtitle.visible = true;
-                this.gameStats.visible = true;
+                this.infoText.text = `The longest rally was ${this.paddleHitsMax} hits\n${getGameResult(this.paddleHitsMax)}`;
+                this.infoText.visible = true;
                 break;
-
-            // todo add another game state after done in which one user has accepted to play again, to entice the user to continue
-
         }
     }
 }

@@ -1,4 +1,5 @@
 export const GAME_STATE = {
+    WELCOME: 'welcome',
     CONNECT: 'connect',
     DISCONNECT: 'disconnect',
     SERVER_REJECT: 'server_reject',

@@ -7,6 +7,7 @@ export default class PlayerScore extends AbstractText {
         super(scene, x, y, size);
         this.player = player;
         this.score = 0;
+        this.textObj.text = this.score;
     }
 
     updateGameState(data) {

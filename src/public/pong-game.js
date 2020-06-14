@@ -52,7 +52,7 @@ let texts, fpsText, mpsText, latText; // texts
 let keys;                             // key bindings
 
 // game state variables
-let gameState = GAME_STATE.CONNECT;
+let gameState = GAME_STATE.WELCOME;
 let gameTime;
 let playerNumber;
 let servingPlayer;
@@ -143,7 +143,6 @@ function create() {
 
     // texts
     texts = new Texts(this, cfg.GAME_HEIGHT, screenCenterX);
-    texts.updateOnline(onlineEnabled);
 
     // create paddles
     paddleLeft = new Paddle(this, 30, 120, 'paddle-left');
@@ -179,7 +178,8 @@ function create() {
     latText = addText(this, perfXOffset, 30, 8, 'LAT 0', perfFont, perfFontColor).setOrigin(0).setDepth(1);
     latText.visible = perfMonEnabled;
 
-    openSocketAndConfigureEvents();
+    // configure server connection
+    configureSocket();
 }
 
 //-- Called by the game engine for every frame drawn to the screen
@@ -283,7 +283,8 @@ function updateKeyState() {
         // [O] toggles online game play on or off
         if (Phaser.Input.Keyboard.JustDown(keys.O)) {
             onlineEnabled = !onlineEnabled;
-            openSocketAndConfigureEvents();
+            configureSocket();
+            handleGameStateMessage({state: GAME_STATE.WELCOME});
         }
 
         // [H] toggles the help panel on or off
@@ -299,6 +300,10 @@ function updateKeyState() {
     // [ENTER] advances the player through different the game states
     if (Phaser.Input.Keyboard.JustDown(keys.ENTER)) {
         switch (gameState) {
+            case GAME_STATE.WELCOME:
+                handleGameStateMessage({state: GAME_STATE.CONNECT});
+                break;
+
             case GAME_STATE.START:
             // same as state done
             case GAME_STATE.DONE:
@@ -325,6 +330,11 @@ function handleGameStateMessage(data) {
     texts.updateGameState(data, playerNumber);
 
     switch (data.state) {
+        case GAME_STATE.CONNECT:
+            texts.updateOnline(onlineEnabled);
+            socket.open();
+            break;
+
         case GAME_STATE.WAIT:
             playerNumber = data.number;
             localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
@@ -558,7 +568,7 @@ function updateRobot() {
     }
 }
 
-function openSocketAndConfigureEvents() {
+function configureSocket() {
     if (onlineEnabled) {
         socket = io({autoConnect: false});
     } else {
@@ -582,7 +592,4 @@ function openSocketAndConfigureEvents() {
         latTotal += Date.now() - data.time;
         latCount++;
     });
-
-    texts.updateOnline(onlineEnabled);
-    socket.open();
 }

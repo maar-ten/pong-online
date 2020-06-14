@@ -1,5 +1,6 @@
 import AbstractText from './AbstractText.js';
 import {GAME_STATE} from '../../constants.js';
+import cfg from '../../config.js';
 
 export default class Title extends AbstractText {
 
@@ -13,22 +14,19 @@ export default class Title extends AbstractText {
     offline = {
         default: this.online.default,
         wait: this.online.default,
-        start: () => '<- Player 1          Player 2 ->',
+        start: () => '<-     Player 1          Player 2     ->',
         serve: (data) => `Player ${data.server} serves !`,
         done: (data) => data.player1Score > data.player2Score ? 'Player 1 Wins !' : 'Player 2 Wins !'
     };
 
     constructor(scene, x, y, size) {
         super(scene, x, y, size);
-        this.dict = this.online;
+        this.dict = cfg.ONLINE_ENABLED ? this.online : this.offline;
+        this.textObj.text = this.dict.default();
     }
 
     updateOnline(isOnline) {
-        if (isOnline) {
-            this.dict = this.online;
-        } else {
-            this.dict = this.offline;
-        }
+        this.dict = isOnline ? this.online : this.offline;
     }
 
     updateGameState(data, playerNumber) {

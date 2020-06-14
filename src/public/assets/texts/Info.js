@@ -1,5 +1,6 @@
 import AbstractText from './AbstractText.js';
 import {GAME_STATE} from '../../constants.js';
+import cfg from '../../config.js';
 
 export default class Info extends AbstractText {
 
@@ -19,7 +20,8 @@ export default class Info extends AbstractText {
         super(scene, x, y, size);
         this.textObj.setAlign('center');
         this.textObj.setLineSpacing(5);
-        this.dict = this.online;
+        this.dict = cfg.ONLINE_ENABLED ? this.online : this.offline;
+        this.textObj.text = this.dict.default();
     }
 
 

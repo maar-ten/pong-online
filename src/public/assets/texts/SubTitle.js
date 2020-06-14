@@ -1,37 +1,35 @@
 import AbstractText from './AbstractText.js';
 import {GAME_STATE} from '../../constants.js';
+import cfg from '../../config.js';
 
 export default class SubTitle extends AbstractText {
 
     online = {
+        continue: () => 'Press   Enter   to Continue',
         connect: () => 'Connecting to server . . .',
         serverReject: () => 'No more room on server',
         wait: () => 'Waiting For Other Player . . .',
-        start: () => 'Press Enter When Ready !',
-        serve: (data) => data.number === data.server ? 'Press Enter to Serve !' : 'Here Comes the Serve !',
-        done: () => 'Press Enter to Play !'
+        start: () => 'Press   Enter   When Ready !',
+        serve: (data) => data.number === data.server ? 'Press   Enter   to Serve !' : 'Here Comes the Serve !',
+        done: () => 'Press   Enter   to Play !'
     };
 
     offline = {
+        continue: this.online.continue,
         connect: this.online.connect,
         serverReject: this.online.serverReject,
-        wait: () => 'Press Enter to Continue',
-        start: () => 'Press Enter to Continue',
-        serve: () => 'Press Enter to Serve !',
+        serve: () => 'Press   Enter   to Serve !',
         done: this.online.done
     };
 
     constructor(scene, x, y, size) {
         super(scene, x, y, size);
-        this.dict = this.online;
+        this.dict = cfg.ONLINE_ENABLED ? this.online : this.offline;
+        this.textObj.text = this.dict.continue();
     }
 
     updateOnline(isOnline) {
-        if (isOnline) {
-            this.dict = this.online;
-        } else {
-            this.dict = this.offline;
-        }
+        this.dict = isOnline ? this.online : this.offline;
     }
 
     updateGameState(data) {
@@ -42,12 +40,12 @@ export default class SubTitle extends AbstractText {
                 this.textObj.text = this.dict.connect();
                 break;
 
-            case GAME_STATE.SERVER_REJECT:
-                this.textObj.text = this.dict.serverReject();
+            case GAME_STATE.WAIT:
+                this.textObj.text = this.dict.wait();
                 break;
 
-            case GAME_STATE.START:
-                this.textObj.text = this.dict.start();
+            case GAME_STATE.SERVER_REJECT:
+                this.textObj.text = this.dict.serverReject();
                 break;
 
             case GAME_STATE.SERVE:

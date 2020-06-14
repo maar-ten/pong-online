@@ -14,7 +14,7 @@ import {dirname, join} from 'path';
 import crypto from 'crypto';
 
 import {GAME_ACTION, GAME_STATE, MESSAGE} from './public/constants.js';
-import GameSession from './public/game-session.js';
+import GameSession from './public/assets/GameSession.js';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -110,10 +110,8 @@ function emitGameStateChanges(state) {
 }
 
 function emitGameActionData(data) {
-    switch (data.action) {
-        case GAME_ACTION.PADDLE_HIT:
-            io.emit(MESSAGE.ACTION, data);
-            break;
+    if (data.action === GAME_ACTION.PADDLE_HIT) {
+        io.emit(MESSAGE.ACTION, data);
     }
 }
 
@@ -126,15 +124,10 @@ function handleClientDisconnect(socket) {
 }
 
 function handleGameAction(socket, data) {
-    switch (data.action) {
-        case GAME_ACTION.PADDLE_MOVE:
-            // send to all clients except the sender
-            socket.broadcast.emit(MESSAGE.ACTION, data);
-            break;
-
-        default:
-            gameSession.handleGameAction(data);
-            break;
+    if (data.action === GAME_ACTION.PADDLE_MOVE) {
+        socket.broadcast.emit(MESSAGE.ACTION, data);
+    } else {
+        gameSession.handleGameAction(data);
     }
 }
 

@@ -1,5 +1,5 @@
-import cfg from './config.js';
-import {GAME_ACTION, GAME_STATE} from './constants.js';
+import cfg from '../config.js';
+import {GAME_ACTION, GAME_STATE} from '../constants.js';
 
 export default class GameSession {
 
@@ -40,6 +40,7 @@ export default class GameSession {
         player.ready = false;
 
         this.players.push(player);
+        console.info(`Player ${player.number} connected`);
 
         if (this.getSize() === 2) {
             // both players connected, ask if they are ready to start
@@ -56,7 +57,7 @@ export default class GameSession {
         return this.players.map(player => player.id);
     }
 
-    addReadyPlayer(number) {
+    _addReadyPlayer(number) {
         const player = this._getPlayerByNumber(number);
         player.ready = true;
         player.score = 0;
@@ -70,7 +71,7 @@ export default class GameSession {
         }
     }
 
-    addPoint(playerNumber) {
+    _addPoint(playerNumber) {
         const player = this._getPlayerByNumber(playerNumber);
         player.score++;
 
@@ -80,14 +81,13 @@ export default class GameSession {
         } else {
             this.newGame = false;
             this.flightData = [];
+            this.paddleHits = 0;
             this.servingPlayer = player.number === 2 ? 1 : 2;
             this._emitGameState(GAME_STATE.SERVE);
         }
     }
 
-    addPaddleHit(flightData) {
-        this.paddleHits++;
-        this.paddleHitsMax = Math.max(this.paddleHitsMax, this.paddleHits);
+    _addPaddleHit(flightData) {
         this.flightData.push(flightData);
 
         function flightDataCorrupt() {
@@ -96,6 +96,9 @@ export default class GameSession {
         }
 
         if (this.flightData.length === 2) {
+            this.paddleHits++;
+            this.paddleHitsMax = Math.max(this.paddleHitsMax, this.paddleHits);
+
             if (flightDataCorrupt.call(this)) {
                 this.flightData = [];
             } else {
@@ -113,7 +116,7 @@ export default class GameSession {
     handleGameAction(data) {
         switch (data.action) {
             case GAME_ACTION.READY:
-                this.addReadyPlayer(data.player);
+                this._addReadyPlayer(data.player);
                 break;
 
             case GAME_ACTION.SERVE:
@@ -121,11 +124,11 @@ export default class GameSession {
                 break;
 
             case GAME_ACTION.SCORE:
-                this.addPoint(data.player);
+                this._addPoint(data.player);
                 break;
 
             case GAME_ACTION.PADDLE_HIT:
-                this.addPaddleHit(data.flightData);
+                this._addPaddleHit(data.flightData);
                 break;
         }
     }
@@ -184,7 +187,6 @@ export default class GameSession {
                 flightData: this.flightData
             };
 
-            this.paddleHits = 0;
             this.flightData = [];
 
             return data;

@@ -1,5 +1,5 @@
-import GameSession from './game-session.js';
-import {GAME_ACTION, GAME_STATE, MESSAGE} from './constants.js';
+import GameSession from './GameSession.js';
+import {GAME_ACTION, GAME_STATE, MESSAGE} from '../constants.js';
 
 /**
  * This class serves as a piece of middleware that emulates the existance of a second client in situations where there
@@ -28,23 +28,23 @@ export class SocketMock {
 
     // used by the client to send data to the server
     emit(eventName, data) {
-        switch (eventName) {
-            case MESSAGE.ACTION:
-                this.gameSession.handleGameAction(data);
+        if (eventName !== MESSAGE.ACTION) {
+            return;
+        }
 
-                // pretend that the other client (player 2) also sends this message
-                const dataPlayer2 = JSON.parse(JSON.stringify(data)); // bit of a hack :-(
-                switch (data.action) {
-                    case GAME_ACTION.READY:
-                        dataPlayer2.player = 2;
-                        this.gameSession.handleGameAction(dataPlayer2);
-                        break;
+        this.gameSession.handleGameAction(data);
 
-                    case GAME_ACTION.PADDLE_HIT:
-                        dataPlayer2.flightData.player = 2;
-                        this.gameSession.handleGameAction(dataPlayer2);
-                        break;
-                }
+        // pretend that the other client (player 2) also sends this message
+        const dataPlayer2 = JSON.parse(JSON.stringify(data)); // bit of a hack :-(
+        switch (data.action) {
+            case GAME_ACTION.READY:
+                dataPlayer2.player = 2;
+                this.gameSession.handleGameAction(dataPlayer2);
+                break;
+
+            case GAME_ACTION.PADDLE_HIT:
+                dataPlayer2.flightData.player = 2;
+                this.gameSession.handleGameAction(dataPlayer2);
                 break;
         }
     }

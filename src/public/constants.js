@@ -6,7 +6,6 @@ export const GAME_STATE = {
     START: 'start',
     START_SERVE: 'start_serve',
     SERVE: 'serve',
-    SCORED: 'scored',
     PLAY: 'play',
     DONE: 'done'
 };

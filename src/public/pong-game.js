@@ -1,12 +1,13 @@
-import Texts, {addText} from './texts.js';
-import Paddle from './paddle.js';
-import Ball from './ball.js';
+import Texts from './assets/Texts.js';
+import {addText} from './assets/texts/AbstractText.js';
+import Paddle from './assets/Paddle.js';
+import Ball from './assets/Ball.js';
 import {GAME_ACTION, GAME_STATE, MESSAGE} from './constants.js';
 import cfg from './config.js';
-import {SocketMock} from './socket-mock.js';
+import {SocketMock} from './assets/SocketMock.js';
 
 // configure the communications channel
-const socket = new SocketMock();
+const socket = cfg.ONLINE_ENABLED ? io() : new SocketMock();
 
 // Phaser game config
 new Phaser.Game({
@@ -188,9 +189,6 @@ function update(time) {
     updatePaddles();
     updateKeyState();
 
-    // update texts
-    texts.update(gameState, playerNumber, servingPlayer);
-
     // enable robotic paddle for robotic player
     updateRobot();
 
@@ -317,6 +315,8 @@ function handleGameStateMessage(data) {
     gameState = data.state;
     ball.reset();
 
+    texts.updateGameState(data, playerNumber);
+
     switch (data.state) {
         case GAME_STATE.WAIT:
             playerNumber = data.number;
@@ -324,13 +324,12 @@ function handleGameStateMessage(data) {
             break;
 
         case GAME_STATE.START:
-            setScoresAndPaddles(data);
+            assignPaddles(data);
             robotEnabled = data.robotEnabled;
             break;
 
         case GAME_STATE.SERVE:
-            texts.resetPaddleHits(data.newGame);
-            setScoresAndPaddles(data);
+            assignPaddles(data);
             servingPlayer = data.server;
             break;
 
@@ -340,17 +339,10 @@ function handleGameStateMessage(data) {
             ball.setVelocity(data.ballVelocity, data.ballAngle);
             ball.setAngleChange(data.angleChange);
             break;
-
-        case GAME_STATE.DONE:
-            texts.setPlayer1Score(data.player1Score);
-            texts.setPlayer2Score(data.player2Score);
-            break;
     }
 
-    function setScoresAndPaddles(data) {
+    function assignPaddles(data) {
         playerNumber = data.number;
-        texts.setPlayer1Score(data.player1Score);
-        texts.setPlayer2Score(data.player2Score);
         localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
         remotePaddle = playerNumber === 2 ? paddleLeft : paddleRight;
         document.getElementsByTagName('title')[0].innerText = `This is Pong - Player ${playerNumber}`;
@@ -414,7 +406,6 @@ function emitPaddleHit() {
     backgroundTints.push(nextTint);
 
     paddleHits++;
-    texts.addPaddleHit();
     const flightTime = paddleHitTime === 0 ? 0 : gameTime - paddleHitTime;
     paddleHitTime = gameTime;
 
@@ -432,6 +423,7 @@ function emitPaddleHit() {
 
 function emitPlayerReady(playerNumber) {
     gameState = GAME_STATE.START_SERVE;
+    handleGameStateMessage({state: gameState});
     emitMessage(MESSAGE.ACTION, {
         action: GAME_ACTION.READY,
         player: playerNumber
@@ -441,9 +433,8 @@ function emitPlayerReady(playerNumber) {
 // Emit a message and reset game state
 function emitPlayerScored(player) {
     ballOutSound.play();
-    ball.reset();
+    ball.setVelocity(0, 0);
     servingPlayer = undefined;
-    gameState = GAME_STATE.SCORED;
 
     if (playerNumber === player || !onlineEnabled) {
         emitMessage(MESSAGE.ACTION, {

@@ -19,9 +19,9 @@ export default class Ball extends Phaser.GameObjects.Image {
     }
 
     reset() {
+        this.setVelocity(0, 0);
         this.x = this.xOrigin;
         this.y = this.yOrigin;
-        this.setVelocity(0, 0);
         this.angleChanges = [];
     }
 

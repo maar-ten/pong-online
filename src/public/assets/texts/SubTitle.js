@@ -12,6 +12,15 @@ export class SubTitle extends AbstractText {
         done: () => 'Press Enter to Play !'
     };
 
+    offline = {
+        connect: this.online.connect,
+        serverReject: this.online.serverReject,
+        wait: () => 'Press Enter to Continue',
+        start: () => 'Press Enter to Continue',
+        serve: () => 'Press Enter to Serve !',
+        done: this.online.done
+    };
+
     constructor(scene, x, y, size) {
         super(scene, x, y, size);
         this.dict = this.online;
@@ -53,9 +62,6 @@ export class SubTitle extends AbstractText {
                 this.textObj.text = this.dict.done();
                 break;
 
-            case GAME_STATE.WAIT:
-            case GAME_STATE.DISCONNECT:
-            case GAME_STATE.START_SERVE:
             default:
                 this.textObj.text = this.dict.wait();
                 break;

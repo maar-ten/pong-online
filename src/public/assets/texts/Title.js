@@ -10,6 +10,14 @@ export class Title extends AbstractText {
         done: (data, playerNumber) => data.player1Score > data.player2Score && playerNumber === 1 ? 'You Win !' : 'You Lose'
     };
 
+    offline = {
+        default: this.online.default,
+        wait: this.online.default,
+        start: () => '<- Player 1          Player 2 ->',
+        serve: (data) => `Player ${data.server} serves !`,
+        done: (data) => data.player1Score > data.player2Score ? 'Player 1 Wins !' : 'Player 2 Wins !'
+    };
+
     constructor(scene, x, y, size) {
         super(scene, x, y, size);
         this.dict = this.online;
@@ -24,7 +32,7 @@ export class Title extends AbstractText {
     }
 
     updateGameState(data, playerNumber) {
-        // visibility of the title is handled in Texts.js inside the tween
+        // visibility of the title is (mostly) handled in Texts.js inside the tween
 
         switch (data.state) {
             case GAME_STATE.START:
@@ -39,15 +47,10 @@ export class Title extends AbstractText {
                 this.textObj.text = this.dict.done(data, playerNumber);
                 break;
 
-            case GAME_STATE.START_SERVE:
             case GAME_STATE.PLAY:
                 this.textObj.visible = false;
                 break;
 
-            case GAME_STATE.CONNECT:
-            case GAME_STATE.SERVER_REJECT:
-            case GAME_STATE.WAIT:
-            case GAME_STATE.DISCONNECT:
             default:
                 this.textObj.text = this.dict.default();
                 break;

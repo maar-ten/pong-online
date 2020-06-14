@@ -23,6 +23,12 @@ export default class Texts {
             });
     }
 
+    updateOnline(onlineEnabled) {
+        this.title.updateOnline(onlineEnabled);
+        this.subtitle.updateOnline(onlineEnabled);
+        this.infoText.updateOnline(onlineEnabled);
+    }
+
     updateGameState(data, playerNumber) {
         if (!this.scoreBoardDown) {
             this.moveScoreBoardDown.play();

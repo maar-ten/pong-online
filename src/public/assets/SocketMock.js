@@ -28,7 +28,7 @@ export class SocketMock {
 
     // used by the client to send data to the server
     emit(eventName, data) {
-        if (eventName !== MESSAGE.ACTION) {
+        if (eventName === MESSAGE.LATENCY) {
             return;
         }
 

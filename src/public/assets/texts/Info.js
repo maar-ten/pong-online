@@ -5,7 +5,7 @@ export class Info extends AbstractText {
 
     online = {
         default: () => 'Press M for some music',
-        done: (data) => `The longest rally was ${data.paddleHitsMax} hits\n${this.getGameResult(data.paddleHitsMax)}`
+        done: (data) => `The longest rally was ${data.paddleHitsMax} hit${data.paddleHitsMax !== 1 ? 's' : ''}\n${this.getGameResult(data.paddleHitsMax)}`
     };
 
     constructor(scene, x, y, size) {
@@ -34,7 +34,7 @@ export class Info extends AbstractText {
     }
 
     getGameResult(paddleHits) {
-        let result = 'That\'s ';
+        let result = 'That is ';
         if (paddleHits >= 21) {
             result += 'out of this world';
         } else if (paddleHits === 20) {
@@ -59,6 +59,8 @@ export class Info extends AbstractText {
             result += 'neat';
         } else if (paddleHits >= 5) {
             result += 'not bad';
+        } else if (paddleHits === 0) {
+            result += 'weird';
         } else {
             result += 'pretty bad';
         }

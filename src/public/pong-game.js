@@ -7,7 +7,7 @@ import cfg from './config.js';
 import {SocketMock} from './assets/SocketMock.js';
 
 // configure the communications channel
-const socket = cfg.ONLINE_ENABLED ? io() : new SocketMock();
+let socket = cfg.ONLINE_ENABLED ? io() : new SocketMock();
 
 // Phaser game config
 new Phaser.Game({
@@ -143,6 +143,7 @@ function create() {
 
     // texts
     texts = new Texts(this, cfg.GAME_HEIGHT, screenCenterX);
+    texts.updateOnline(onlineEnabled);
 
     // create paddles
     paddleLeft = new Paddle(this, 30, 120, 'paddle-left');
@@ -268,28 +269,23 @@ function updatePaddles() {
 }
 
 function updateKeyState() {
-    // [p] toggles the performance monitor on or off
+    // [P] toggles the performance monitor on or off
     if (Phaser.Input.Keyboard.JustDown(keys.P)) {
         perfMonEnabled = !perfMonEnabled;
     }
 
-    // [m] toggles the music on or off
+    // [M] toggles the music on or off
     if (Phaser.Input.Keyboard.JustDown(keys.M)) {
         gameTune.isPlaying ? gameTune.pause() : gameTune.play();
     }
 
-    // [o] toggles online game play on or off
+    // [O] toggles online game play on or off
     if (Phaser.Input.Keyboard.JustDown(keys.O)) {
         onlineEnabled = !onlineEnabled;
-        if (socket.connected) {
-            socket.disconnect();
-        } else {
-            socket.open();
-            openSocketAndConfigureEvents();
-        }
+        openSocketAndConfigureEvents();
     }
 
-    // [enter] advances the player through different the game states
+    // [ENTER] advances the player through different the game states
     if (Phaser.Input.Keyboard.JustDown(keys.ENTER)) {
         switch (gameState) {
             case GAME_STATE.START:
@@ -552,6 +548,15 @@ function updateRobot() {
 }
 
 function openSocketAndConfigureEvents() {
+    if (onlineEnabled) {
+        socket = io({autoConnect: false});
+    } else {
+        if (socket.connected) {
+            socket.disconnect();
+        }
+        socket = new SocketMock();
+    }
+
     // react to game state changes
     socket.on(MESSAGE.GAME_STATE, (data) => handleGameStateMessage(data));
 
@@ -567,5 +572,6 @@ function openSocketAndConfigureEvents() {
         latCount++;
     });
 
+    texts.updateOnline(onlineEnabled);
     socket.open();
 }

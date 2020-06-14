@@ -47,7 +47,7 @@ new Phaser.Game({
 // game objects and input configuration
 let paddleLeft, paddleRight, ball;    // sprites
 let wallHitSound, ballOutSound;       // sounds
-let gameTune;                          // music
+let gameTune;                         // music
 let texts, fpsText, mpsText, latText; // texts
 let keys;                             // key bindings
 
@@ -160,7 +160,7 @@ function create() {
     this.physics.world.on('worldbounds', () => wallHitSound.play()); // is emitted by the ball
 
     // keyboard mappings
-    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M, P, O');
+    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M, P, O, H');
 
     // font settings for the performance monitor
     const perfFont = 'PressStart2P';
@@ -269,20 +269,31 @@ function updatePaddles() {
 }
 
 function updateKeyState() {
-    // [P] toggles the performance monitor on or off
-    if (Phaser.Input.Keyboard.JustDown(keys.P)) {
-        perfMonEnabled = !perfMonEnabled;
+    if (gameState !== GAME_STATE.PLAY) {
+        // [P] toggles the performance monitor on or off
+        if (Phaser.Input.Keyboard.JustDown(keys.P)) {
+            perfMonEnabled = !perfMonEnabled;
+        }
+
+        // [M] toggles the music on or off
+        if (Phaser.Input.Keyboard.JustDown(keys.M)) {
+            gameTune.isPlaying ? gameTune.pause() : gameTune.play();
+        }
+
+        // [O] toggles online game play on or off
+        if (Phaser.Input.Keyboard.JustDown(keys.O)) {
+            onlineEnabled = !onlineEnabled;
+            openSocketAndConfigureEvents();
+        }
+
+        // [H] toggles the help panel on or off
+        if (Phaser.Input.Keyboard.JustDown(keys.H)) {
+            texts.toggleHelp();
+        }
     }
 
-    // [M] toggles the music on or off
-    if (Phaser.Input.Keyboard.JustDown(keys.M)) {
-        gameTune.isPlaying ? gameTune.pause() : gameTune.play();
-    }
-
-    // [O] toggles online game play on or off
-    if (Phaser.Input.Keyboard.JustDown(keys.O)) {
-        onlineEnabled = !onlineEnabled;
-        openSocketAndConfigureEvents();
+    if (texts.isHelpOpen()) {
+        return;
     }
 
     // [ENTER] advances the player through different the game states

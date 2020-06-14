@@ -1,7 +1,7 @@
+import AbstractText from './AbstractText.js';
 import {GAME_STATE} from '../../constants.js';
-import {AbstractText} from './AbstractText.js';
 
-export class PlayerScore extends AbstractText {
+export default class PlayerScore extends AbstractText {
 
     constructor(scene, x, y, size, player) {
         super(scene, x, y, size);

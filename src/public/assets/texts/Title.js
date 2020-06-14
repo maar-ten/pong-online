@@ -1,7 +1,7 @@
+import AbstractText from './AbstractText.js';
 import {GAME_STATE} from '../../constants.js';
-import {AbstractText} from './AbstractText.js';
 
-export class Title extends AbstractText {
+export default class Title extends AbstractText {
 
     online = {
         default: () => 'This is Pong !',

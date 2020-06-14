@@ -1,7 +1,7 @@
+import AbstractText from './AbstractText.js';
 import {GAME_STATE} from '../../constants.js';
-import {AbstractText} from './AbstractText.js';
 
-export class SubTitle extends AbstractText {
+export default class SubTitle extends AbstractText {
 
     online = {
         connect: () => 'Connecting to server . . .',

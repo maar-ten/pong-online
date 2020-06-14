@@ -1,8 +1,9 @@
 import {GAME_STATE} from '../constants.js';
-import {Title} from './texts/Title.js';
-import {SubTitle} from './texts/SubTitle.js';
-import {PlayerScore} from './texts/PlayerScore.js';
-import {Info} from './texts/Info.js';
+import Title from './texts/Title.js';
+import SubTitle from './texts/SubTitle.js';
+import PlayerScore from './texts/PlayerScore.js';
+import Info from './texts/Info.js';
+import Help from './texts/Help.js';
 
 export default class Texts {
 
@@ -12,6 +13,7 @@ export default class Texts {
         this.player1ScoreText = new PlayerScore(scene, screenCenterX - 100, screenHeight / 3, 84, 1);
         this.player2ScoreText = new PlayerScore(scene, screenCenterX + 100, screenHeight / 3, 84, 2);
         this.infoText = new Info(scene, screenCenterX, screenHeight * .64, 24);
+        this.helpText = new Help(scene, screenCenterX, screenHeight / 2, 48);
 
         // create a tween to move the scoreboard out of the way when playing
         this.scoreBoardDown = true;
@@ -27,6 +29,15 @@ export default class Texts {
         this.title.updateOnline(onlineEnabled);
         this.subtitle.updateOnline(onlineEnabled);
         this.infoText.updateOnline(onlineEnabled);
+        this.helpText.updateOnline(onlineEnabled);
+    }
+
+    toggleHelp() {
+        this.helpText.textObj.visible = !this.helpText.textObj.visible;
+    }
+
+    isHelpOpen() {
+        return this.helpText.textObj.visible;
     }
 
     updateGameState(data, playerNumber) {
@@ -42,6 +53,7 @@ export default class Texts {
         this.player1ScoreText.updateGameState(data, playerNumber);
         this.player2ScoreText.updateGameState(data, playerNumber);
         this.infoText.updateGameState(data, playerNumber);
+        this.helpText.updateGameState(data, playerNumber);
     }
 }
 

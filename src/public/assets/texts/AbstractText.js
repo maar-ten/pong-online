@@ -1,4 +1,4 @@
-export class AbstractText {
+export default class AbstractText {
 
     constructor(scene, x, y, size) {
         this.textObj = addText(scene, x, y, size, '');

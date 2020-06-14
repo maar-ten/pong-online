@@ -1,10 +1,10 @@
+import AbstractText from './AbstractText.js';
 import {GAME_STATE} from '../../constants.js';
-import {AbstractText} from './AbstractText.js';
 
-export class Info extends AbstractText {
+export default class Info extends AbstractText {
 
     online = {
-        default: () => 'Press M for some music',
+        default: () => 'Press M for some music\n Press H for help',
         done: (data) => `The longest rally was ${data.paddleHitsMax} hit${data.paddleHitsMax !== 1 ? 's' : ''}\n${this.getGameResult(data.paddleHitsMax)}`
     };
 

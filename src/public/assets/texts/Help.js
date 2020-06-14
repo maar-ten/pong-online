@@ -14,13 +14,13 @@ R - robot on/off
 -=*> Credits <*=-\n\nhttps://maar-ten.nl/pong-more`;
 
     online = {
-        default: `-=*> Move paddle <*=-\n\nW/S or Up/Down\n`
+        default: `-=*> Move paddle <*=-\n\nW / S or Up / Down\n`
     };
 
     offline = {
         default: `-=*> Move paddles <*=-\n
-W/S     - left paddle
-Up/Down - right paddle`
+W / S     - left paddle
+Up / Down - right paddle`
     };
 
     constructor(scene, x, y, size) {

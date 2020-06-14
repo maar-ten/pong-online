@@ -1,4 +1,4 @@
-Pong 🏓
+This is Pong 🏓
 ===
 
 Pong is a classic video game created in the 70s by [Atari](https://en.wikipedia.org/wiki/Pong). I recreated this game as

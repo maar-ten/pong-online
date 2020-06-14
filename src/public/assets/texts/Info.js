@@ -3,15 +3,28 @@ import {GAME_STATE} from '../../constants.js';
 
 export default class Info extends AbstractText {
 
+    default = 'Press   M   for some music\nPress   H   for help\n';
+
     online = {
-        default: () => 'Press M for some music\n Press H for help',
+        default: () => this.default + 'Playing online',
         done: (data) => `The longest rally was ${data.paddleHitsMax} hit${data.paddleHitsMax !== 1 ? 's' : ''}\n${this.getGameResult(data.paddleHitsMax)}`
+    };
+
+    offline = {
+        default: () => this.default + 'Playing offline',
+        done: this.online.done
     };
 
     constructor(scene, x, y, size) {
         super(scene, x, y, size);
         this.textObj.setAlign('center');
+        this.textObj.setLineSpacing(5);
         this.dict = this.online;
+    }
+
+
+    updateOnline(isOnline) {
+        this.dict = isOnline ? this.online : this.offline;
     }
 
     updateGameState(data) {

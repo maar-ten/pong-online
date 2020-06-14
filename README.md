@@ -55,7 +55,7 @@ Game states progress by user actions like pressing \<enter\>, or the game logic 
 
 When playing online the game waits after connecting to the server for another opponent to join the session before continuing on to the next state.
 
-The play state finishes when a player scores a point. The game logic decides which state comes next: **serve** if there is no winner yet, otherwise **Done**.
+The play state finishes when a player scores a point. The game logic decides which state comes next: **Serve** if there is no winner yet, otherwise **Done**.
 
 License
 ---

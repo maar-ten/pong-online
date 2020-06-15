@@ -18,6 +18,8 @@ export default class SubTitle extends AbstractText {
         continue: this.online.continue,
         connect: this.online.connect,
         serverReject: this.online.serverReject,
+        wait: this.online.continue,
+        start: this.online.continue,
         serve: () => 'Press   Enter   to Serve !',
         done: this.online.done
     };

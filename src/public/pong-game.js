@@ -327,11 +327,11 @@ function handleGameStateMessage(data) {
     gameState = data.state;
     ball.reset();
 
+    texts.updateOnline(onlineEnabled);
     texts.updateGameState(data, playerNumber);
 
     switch (data.state) {
         case GAME_STATE.CONNECT:
-            texts.updateOnline(onlineEnabled);
             socket.open();
             break;
 

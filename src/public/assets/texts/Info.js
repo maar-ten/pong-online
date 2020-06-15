@@ -4,7 +4,7 @@ import cfg from '../../config.js';
 
 export default class Info extends AbstractText {
 
-    default = 'Press   M   for some music\nPress   H   for help\n';
+    default = 'Press   M   for some music\nPress   H   for help\n\n';
 
     online = {
         default: () => this.default + 'Playing online',

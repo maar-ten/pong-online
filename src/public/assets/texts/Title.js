@@ -34,6 +34,7 @@ export default class Title extends AbstractText {
 
         switch (data.state) {
             case GAME_STATE.START:
+            case GAME_STATE.START_SERVE:
                 this.textObj.text = this.dict.start(data);
                 break;
 

@@ -119,8 +119,8 @@ function emitGameActionData(data) {
 function handleClientDisconnect(socket) {
     const player = gameSession.removePlayer(socket.id);
     console.info(`Player ${player.number} disconnected`);
-    socket.broadcast.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.DISCONNECT});
-    //todo add socket close?
+    socket.broadcast.emit(MESSAGE.GAME_STATE, gameSession.getGameStateData_Disconnect());
+    socket.disconnect(true);
 }
 
 function handleGameAction(socket, data) {

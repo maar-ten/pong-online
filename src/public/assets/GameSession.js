@@ -179,6 +179,12 @@ export default class GameSession {
         };
     }
 
+    getGameStateData_Disconnect() {
+        return {
+            state: GAME_STATE.DISCONNECT
+        };
+    }
+
     getGameActionData_PaddleHit() {
         if (this.flightData.length === 2) {
             const data = {

@@ -38,16 +38,26 @@ export default class SubTitle extends AbstractText {
         // visibility of the title is handled in Texts.js inside the tween
 
         switch (data.state) {
+            case GAME_STATE.WELCOME:
+                this.textObj.text = this.dict.continue();
+                break;
+
             case GAME_STATE.CONNECT:
                 this.textObj.text = this.dict.connect();
                 break;
 
+            case GAME_STATE.SERVER_REJECT:
+                this.textObj.text = this.dict.serverReject();
+                break;
+
+            case GAME_STATE.DISCONNECT:
+            case GAME_STATE.START_SERVE:
             case GAME_STATE.WAIT:
                 this.textObj.text = this.dict.wait();
                 break;
 
-            case GAME_STATE.SERVER_REJECT:
-                this.textObj.text = this.dict.serverReject();
+            case GAME_STATE.START:
+                this.textObj.text = this.dict.start();
                 break;
 
             case GAME_STATE.SERVE:
@@ -60,10 +70,6 @@ export default class SubTitle extends AbstractText {
 
             case GAME_STATE.DONE:
                 this.textObj.text = this.dict.done();
-                break;
-
-            default:
-                this.textObj.text = this.dict.wait();
                 break;
         }
     }

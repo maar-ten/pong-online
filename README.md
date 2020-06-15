@@ -6,6 +6,29 @@ the final project for the CS50 computer science course that I did in 2020.
 
 The goal of this project is to create an online multiplayer version of the original Pong game.
 
+Local installation
+---
+First install [NodeJS](https://nodejs.org/) version 12 or newer, if you haven't got it already.
+
+Then run `node install` inside the project folder. This will install the app and its dependencies.
+
+Run `node src/main.js` to start the game server. It will be listening on port 3000 by default.
+
+Then go to http://localhost:3000 in a web browser.
+
+The game starts in offline mode. In this mode you can play on the same computer against another player or against the robot 🤖.
+
+Press [M] to listen to some music. Press [H] to see what other game options there are.
+
+
+Server installation
+---
+If you want to play online against a friend, you need to install the software on a public server that can accept incoming connnections.
+
+In this case you might want to turn online mode on by default. This can be configured in [src/public/config.js](src/public/config.js).
+
+Then send the url of the server to your friend and have some fun! 🏓
+
 Development
 ---
 To help with the development of the game I used a number of freely available resources:
@@ -21,31 +44,6 @@ To help with the development of the game I used a number of freely available res
 - I might have used [Stack Overflow](https://stackoverflow.com/questions?tab=Frequent) once or twice 🤣
 
 All this software is free to use and is created by many unsung heroes of the internet 🦸‍♀️ 
-
-
-Local installation
----
-First install [NodeJS](https://nodejs.org/) version 13.2.0 or newer, if you haven't already.
-
-Run `node install` inside the project folder. This will install the app and its dependencies.
-
-Run `node src/main.js` to start the game server. It will be listening on port 3000 by default.
-
-Then go to http://localhost:3000 in a web browser.
-
-If you want to play a game against the computer, open the same url in a second browser window. 
-Put them side by and have some fun! 🤖
-
-
-Server installation
----
-If you want to play online against a friend, you need to install the software on a public server that can accept incoming connnections.
-
-You probably want to disable the robot and perhaps also the performance logging. Both are configured in [src/public/config.js](src/public/config.js).
-
-Then start the server using `nohup node src/main.js &`. After that, if you leave the shell the program will keep running.
-
-Send the url of the server to your friend and have some fun! 🏓
 
 Game States
 ---

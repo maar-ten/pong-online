@@ -1,4 +1,4 @@
-Pong 🏓
+This is Pong 🏓
 ===
 
 Pong is a classic video game created in the 70s by [Atari](https://en.wikipedia.org/wiki/Pong). I recreated this game as
@@ -47,6 +47,15 @@ Then start the server using `nohup node src/main.js &`. After that, if you leave
 
 Send the url of the server to your friend and have some fun! 🏓
 
+Game States
+---
+![Game State Diagram](src/public/assets/images/game-state-diagram.svg)
+
+Game states progress by user actions like pressing \<enter\>, or the game logic like scoring a point.
+
+When playing online the game waits after connecting to the server for another opponent to join the session before continuing on to the next state.
+
+The play state finishes when a player scores a point. The game logic decides which state comes next: **Serve** if there is no winner yet, otherwise **Done**.
 
 License
 ---

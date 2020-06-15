@@ -1,11 +1,13 @@
-import Texts, {addText} from './texts.js';
-import Paddle from './paddle.js';
-import Ball from './ball.js';
+import Texts from './assets/Texts.js';
+import {addText} from './assets/texts/AbstractText.js';
+import Paddle from './assets/Paddle.js';
+import Ball from './assets/Ball.js';
 import {GAME_ACTION, GAME_STATE, MESSAGE} from './constants.js';
 import cfg from './config.js';
+import {SocketMock} from './assets/SocketMock.js';
 
-// open the communications channel
-const socket = io();
+// configure the communications channel
+let socket = cfg.ONLINE_ENABLED ? io() : new SocketMock();
 
 // Phaser game config
 new Phaser.Game({
@@ -42,15 +44,15 @@ new Phaser.Game({
     }
 });
 
-// assets
+// game objects and input configuration
 let paddleLeft, paddleRight, ball;    // sprites
 let wallHitSound, ballOutSound;       // sounds
-let gameTune                          // music
+let gameTune;                         // music
 let texts, fpsText, mpsText, latText; // texts
 let keys;                             // key bindings
 
 // game state variables
-let gameState = GAME_STATE.CONNECT;
+let gameState = GAME_STATE.WELCOME;
 let gameTime;
 let playerNumber;
 let servingPlayer;
@@ -58,6 +60,7 @@ let localPaddle;
 let remotePaddle;
 let robotEnabled = cfg.ROBOT_ENABLED;
 let perfMonEnabled = cfg.PERF_MON_ENABLED;
+let onlineEnabled = cfg.ONLINE_ENABLED;
 
 const backgroundTiles = [];
 const backgroundTints = [];
@@ -82,12 +85,12 @@ let fpsTime = 0;
 let fpsCount = 0;
 
 // messages rate (message per second)
-const MPS_TIME_THRESHOLD = 3000 // average the mps calculation over this amount of milliseconds
+const MPS_TIME_THRESHOLD = 3000; // average the mps calculation over this amount of milliseconds
 let mpsTime = 0;
 let mpsCount = 0;
 
 // network latency (milliseconds)
-const LAT_COUNT_THRESHOLD = 3 // average the latency calculation over this amount of measurements
+const LAT_COUNT_THRESHOLD = 3; // average the latency calculation over this amount of measurements
 const LAT_INTERVAL = 1; // number of seconds between latency measurements
 let latTime = 0;
 let latTotal = 0;
@@ -136,7 +139,7 @@ function create() {
                 .setOrigin(0).setTint(0x2286D8));
         }
     }
-    backgroundTints.push(0x7422d8, 0xd87422, 0x86d822, 0x2286D8);
+    backgroundTints.push(0x86d822, 0xd87422, 0xd8cf22, 0x2286D8);
 
     // texts
     texts = new Texts(this, cfg.GAME_HEIGHT, screenCenterX);
@@ -148,7 +151,6 @@ function create() {
     // create ball and add the paddles as colliders
     const paddleHitSound = this.sound.add('paddle-hit');
     ball = new Ball(this, screenCenterX, screenCenterY, 'ball');
-    ball.body.setAngularVelocity(150);
     ball.addCollider(paddleLeft, paddleHitSound, emitPaddleHit);
     ball.addCollider(paddleRight, paddleHitSound, emitPaddleHit);
 
@@ -157,10 +159,10 @@ function create() {
     this.physics.world.on('worldbounds', () => wallHitSound.play()); // is emitted by the ball
 
     // keyboard mappings
-    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M, P, L');
+    keys = this.input.keyboard.addKeys('W, S, UP, DOWN, ENTER, M, P, O, H');
 
     // font settings for the performance monitor
-    const perfFont = 'PressStart2P'
+    const perfFont = 'PressStart2P';
     const perfFontColor = '#00ff00aa';
     const perfXOffset = 10;
 
@@ -175,19 +177,9 @@ function create() {
     // latency monitor
     latText = addText(this, perfXOffset, 30, 8, 'LAT 0', perfFont, perfFontColor).setOrigin(0).setDepth(1);
     latText.visible = perfMonEnabled;
-    socket.on(MESSAGE.LATENCY, (data) => {
-        latTotal += Date.now() - data.time;
-        latCount++;
-    });
 
-    // react to game state changes
-    socket.on(MESSAGE.GAME_STATE, (data) => handleGameStateMessage(data));
-
-    // react to remote player actions
-    socket.on(MESSAGE.ACTION, (data) => handleRemoteActionMessage(data));
-
-    // react to connection errors
-    socket.on(MESSAGE.CONNECT_ERROR, () => gameState = GAME_STATE.CONNECT);
+    // configure server connection
+    configureSocket();
 }
 
 //-- Called by the game engine for every frame drawn to the screen
@@ -195,19 +187,14 @@ function update(time) {
     gameTime = time;
 
     updateBallStatus(this);
-    updateLocalPaddle();
-    updateEnterKeyState();
-    updateMusicKeyState();
-
-    // update texts
-    texts.update(gameState, playerNumber, servingPlayer);
+    updatePaddles();
+    updateKeyState();
 
     // enable robotic paddle for robotic player
-    if (robotEnabled && playerNumber === ROBOTIC_PLAYER_NUMBER) {
-        updateRobot();
-    }
+    updateRobot();
+
     // update performance statistics
-    if (perfMonEnabled) updateStats();
+    updateStats();
 }
 
 // Registers ball flight sync issues and when one of the players scores a point
@@ -229,18 +216,20 @@ function updateBallStatus(scene) {
     if (gameState === GAME_STATE.PLAY) {
         // ball exits to the right (player 1 scores)
         if (ball.x - ball.width / 2 > cfg.GAME_WIDTH) {
-            playerScored(1);
+            emitPlayerScored(1);
         }
 
         // ball exits to the left (player 2 scores)
         if (ball.x + ball.width / 2 < 0) {
-            playerScored(2);
+            emitPlayerScored(2);
         }
     }
 }
 
-function updateLocalPaddle() {
-    if (localPaddle) {
+function updatePaddles() {
+
+    // when playing online the player can use both W/S and up/down to control the local paddle
+    if (localPaddle && onlineEnabled) {
         // react to keyboard presses
         if (keys.UP.isDown || keys.W.isDown) {
             localPaddle.body.setVelocityY(-cfg.PADDLE_SPEED);
@@ -254,11 +243,67 @@ function updateLocalPaddle() {
         localPaddleFrames++;
         emitPaddleMoved();
     }
+
+    // when playing offline W/S are assigned to the left paddle and up/down to the right paddle
+    if (!onlineEnabled) {
+        // react to keyboard presses
+        if (keys.W.isDown) {
+            paddleLeft.body.setVelocityY(-cfg.PADDLE_SPEED);
+        } else if (keys.S.isDown) {
+            paddleLeft.body.setVelocityY(cfg.PADDLE_SPEED);
+        } else {
+            paddleLeft.body.setVelocityY(0);
+        }
+
+        // when the robot is enabled up/down are not used
+        if (!robotEnabled) {
+            if (keys.UP.isDown) {
+                paddleRight.body.setVelocityY(-cfg.PADDLE_SPEED);
+            } else if (keys.DOWN.isDown) {
+                paddleRight.body.setVelocityY(cfg.PADDLE_SPEED);
+            } else {
+                paddleRight.body.setVelocityY(0);
+            }
+        }
+    }
 }
 
-function updateEnterKeyState() {
+function updateKeyState() {
+    if (gameState !== GAME_STATE.PLAY) {
+        // [P] toggles the performance monitor on or off
+        if (Phaser.Input.Keyboard.JustDown(keys.P)) {
+            perfMonEnabled = !perfMonEnabled;
+        }
+
+        // [M] toggles the music on or off
+        if (Phaser.Input.Keyboard.JustDown(keys.M)) {
+            gameTune.isPlaying ? gameTune.pause() : gameTune.play();
+        }
+
+        // [O] toggles online game play on or off
+        if (Phaser.Input.Keyboard.JustDown(keys.O)) {
+            onlineEnabled = !onlineEnabled;
+            configureSocket();
+            handleGameStateMessage({state: GAME_STATE.WELCOME});
+        }
+
+        // [H] toggles the help panel on or off
+        if (Phaser.Input.Keyboard.JustDown(keys.H)) {
+            texts.toggleHelp();
+        }
+    }
+
+    if (texts.isHelpOpen()) {
+        return;
+    }
+
+    // [ENTER] advances the player through different the game states
     if (Phaser.Input.Keyboard.JustDown(keys.ENTER)) {
         switch (gameState) {
+            case GAME_STATE.WELCOME:
+                handleGameStateMessage({state: GAME_STATE.CONNECT});
+                break;
+
             case GAME_STATE.START:
             // same as state done
             case GAME_STATE.DONE:
@@ -266,7 +311,7 @@ function updateEnterKeyState() {
                 break;
 
             case GAME_STATE.SERVE:
-                if (servingPlayer === playerNumber) {
+                if (servingPlayer === playerNumber || !onlineEnabled) {
                     emitMessage(MESSAGE.ACTION, {
                         action: GAME_ACTION.SERVE,
                         player: playerNumber
@@ -277,33 +322,31 @@ function updateEnterKeyState() {
     }
 }
 
-function updateMusicKeyState() {
-    if (Phaser.Input.Keyboard.JustDown(keys.M)) {
-        gameTune.isPlaying ? gameTune.pause() : gameTune.play();
-    }
-}
-
 // Handle game state changes from the server
 function handleGameStateMessage(data) {
     gameState = data.state;
     ball.reset();
-    ball.setVelocity(0, 0);
+
+    texts.updateOnline(onlineEnabled);
+    texts.updateGameState(data, playerNumber);
 
     switch (data.state) {
+        case GAME_STATE.CONNECT:
+            socket.open();
+            break;
+
         case GAME_STATE.WAIT:
             playerNumber = data.number;
             localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
             break;
 
         case GAME_STATE.START:
-            setScoresAndPaddles(data);
-            perfMonEnabled = data.perfMonEnabled;
+            assignPaddles(data);
             robotEnabled = data.robotEnabled;
             break;
 
         case GAME_STATE.SERVE:
-            texts.resetPaddleHits(data.newGame);
-            setScoresAndPaddles(data);
+            assignPaddles(data);
             servingPlayer = data.server;
             break;
 
@@ -313,17 +356,10 @@ function handleGameStateMessage(data) {
             ball.setVelocity(data.ballVelocity, data.ballAngle);
             ball.setAngleChange(data.angleChange);
             break;
-
-        case GAME_STATE.DONE:
-            texts.setPlayer1Score(data.player1Score);
-            texts.setPlayer2Score(data.player2Score);
-            break;
     }
 
-    function setScoresAndPaddles(data) {
+    function assignPaddles(data) {
         playerNumber = data.number;
-        texts.setPlayer1Score(data.player1Score);
-        texts.setPlayer2Score(data.player2Score);
         localPaddle = playerNumber === 1 ? paddleLeft : paddleRight;
         remotePaddle = playerNumber === 2 ? paddleLeft : paddleRight;
         document.getElementsByTagName('title')[0].innerText = `This is Pong - Player ${playerNumber}`;
@@ -370,6 +406,7 @@ function emitPaddleMoved() {
     if (localPaddleFrames >= LOCAL_PADDLE_FRAMES_THRESHOLD && localPaddleDy >= LOCAL_PADDLE_Y_THRESHOLD) {
         emitMessage(MESSAGE.ACTION, {
             action: GAME_ACTION.PADDLE_MOVE,
+            player: playerNumber,
             y: localPaddle.y
         });
 
@@ -386,7 +423,6 @@ function emitPaddleHit() {
     backgroundTints.push(nextTint);
 
     paddleHits++;
-    texts.addPaddleHit();
     const flightTime = paddleHitTime === 0 ? 0 : gameTime - paddleHitTime;
     paddleHitTime = gameTime;
 
@@ -404,24 +440,25 @@ function emitPaddleHit() {
 
 function emitPlayerReady(playerNumber) {
     gameState = GAME_STATE.START_SERVE;
-    emitMessage(MESSAGE.READY, {
-        player: playerNumber,
-        ready: true
+    handleGameStateMessage({state: gameState});
+    emitMessage(MESSAGE.ACTION, {
+        action: GAME_ACTION.READY,
+        player: playerNumber
     });
 }
 
 // Emit a message and reset game state
-function playerScored(player) {
-    if (playerNumber === player) {
+function emitPlayerScored(player) {
+    ballOutSound.play();
+    ball.setVelocity(0, 0);
+    servingPlayer = undefined;
+
+    if (playerNumber === player || !onlineEnabled) {
         emitMessage(MESSAGE.ACTION, {
             action: GAME_ACTION.SCORE,
-            player: playerNumber
+            player: player
         });
     }
-    ballOutSound.play();
-    ball.reset();
-    servingPlayer = undefined;
-    gameState = GAME_STATE.SERVE_PLAY;
 }
 
 function emitMessage(type, data) {
@@ -430,9 +467,15 @@ function emitMessage(type, data) {
 }
 
 function updateStats() {
+    if (perfMonEnabled) {
         updateFps();
         updateMps();
         updateLat();
+    } else {
+        fpsText.visible = false;
+        mpsText.visible = false;
+        latText.visible = false;
+    }
 }
 
 // The FPS displayed is averaged over a number of frames to make it less jittery
@@ -487,9 +530,12 @@ function updateLat() {
 
 // Code for controlling the robotic player
 function updateRobot() {
+    if (!robotEnabled || (onlineEnabled && playerNumber !== ROBOTIC_PLAYER_NUMBER)) {
+        return;
+    }
 
     // move the paddle towards the ball
-    const dy = Math.abs(localPaddle.y - ball.y)
+    const dy = Math.abs(localPaddle.y - ball.y);
     if (dy > 10) {
         const speed = cfg.PADDLE_SPEED * .9;
         const direction = localPaddle.y < ball.y ? 1 : -1;
@@ -520,4 +566,30 @@ function updateRobot() {
             }
             break;
     }
+}
+
+function configureSocket() {
+    if (onlineEnabled) {
+        socket = io({autoConnect: false});
+    } else {
+        if (socket.connected) {
+            socket.disconnect();
+        }
+        socket = new SocketMock();
+    }
+
+    // react to game state changes
+    socket.on(MESSAGE.GAME_STATE, (data) => handleGameStateMessage(data));
+
+    // react to remote player actions
+    socket.on(MESSAGE.ACTION, (data) => handleRemoteActionMessage(data));
+
+    // react to connection errors
+    socket.on(MESSAGE.CONNECT_ERROR, () => gameState = GAME_STATE.CONNECT);
+
+    // react to latency status messages
+    socket.on(MESSAGE.LATENCY, (data) => {
+        latTotal += Date.now() - data.time;
+        latCount++;
+    });
 }

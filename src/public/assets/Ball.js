@@ -6,12 +6,12 @@ export default class Ball extends Phaser.GameObjects.Image {
     constructor(scene, x, y, texture) {
         super(scene, x, y, texture);
         scene.add.existing(this);
-        this.scene.physics.add.existing(this);
+        scene.physics.add.existing(this);
         this.body.setCollideWorldBounds(true);
         this.body.onWorldBounds = true;
         this.body.setCircle(this.width / 2, 0, 5);
         this.body.setBounce(1);
-        this.setOrigin(.5);
+        this.body.setAngularVelocity(150); // slowly rotate the ball for visual effect
         this.setDisplaySize(BALL_SIZE, BALL_SIZE);
         this.xOrigin = this.x;
         this.yOrigin = this.y;
@@ -35,26 +35,19 @@ export default class Ball extends Phaser.GameObjects.Image {
         if (this.body.wasTouching.none) {
             this.sound.play();
 
-            if (this.body.touching.left || this.body.touching.right) {
-                const angle = this.body.velocity.angle();
-                const angleChange = this.angleChanges.length ? this.angleChanges.shift(): 0;
+            const angle = this.body.velocity.angle();
+            const angleChange = this.angleChanges.length ? this.angleChanges.shift() : 0;
 
-                // increase speed
-                this.body.velocity.setAngle(0);
-                this.body.velocity.x = -this.body.velocity.x * ACCELERATION;
+            // increase speed
+            this.body.velocity.setAngle(0);
+            this.body.velocity.x = -this.body.velocity.x * ACCELERATION;
 
-                // slightly change angle
-                this.body.velocity.setAngle((angle + angleChange) * Phaser.Math.DEG_TO_RAD);
+            // slightly change angle
+            this.body.velocity.setAngle((angle + angleChange) * Phaser.Math.DEG_TO_RAD);
 
-                // report back to get a new angle
-                this.collisionCallbackFn();
+            // report back to get a new angle
+            this.collisionCallbackFn();
 
-            } else if (this.body.touching.top || this.body.touching.bottom) {
-                // ball hit either the top or bottom
-                this.body.velocity.x = -this.body.velocity.x;
-                this.body.velocity.y = -this.body.velocity.y;
-
-            }
         }
     }
 

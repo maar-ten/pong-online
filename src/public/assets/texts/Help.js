@@ -10,7 +10,6 @@ H - help on/off
 M - music on/off
 O - offline on/off
 P - performance monitor on/off
-R - robot on/off
 \n
 -=*> Credits <*=-\n\nhttps://maar-ten.nl/pong-more`;
 

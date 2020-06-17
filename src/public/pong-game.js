@@ -7,7 +7,7 @@ import cfg from './config.js';
 import {SocketMock} from './assets/SocketMock.js';
 
 // configure the communications channel
-let socket = cfg.ONLINE_ENABLED ? io() : new SocketMock();
+let socket;
 
 // Phaser game config
 new Phaser.Game({

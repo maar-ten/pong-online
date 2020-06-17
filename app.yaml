@@ -1,2 +1,7 @@
-# GoogleCloudPlatform config https://github.com/GoogleCloudPlatform/nodejs-docs-samples/tree/master/appengine/hello-world/standard
-runtime: nodejs12
+# GoogleCloudPlatform config for websockets https://github.com/GoogleCloudPlatform/nodejs-docs-samples/tree/master/appengine/websockets
+runtime: nodejs
+env: flex
+
+manual_scaling:
+  instances: 1
+

@@ -450,7 +450,8 @@ function emitPlayerReady(playerNumber) {
 // Emit a message and reset game state
 function emitPlayerScored(player) {
     ballOutSound.play();
-    ball.setVelocity(0, 0);
+    ball.reset();
+
     servingPlayer = undefined;
 
     if (playerNumber === player || !onlineEnabled) {
@@ -572,7 +573,7 @@ function configureSocket() {
     if (onlineEnabled) {
         socket = io({autoConnect: false});
     } else {
-        if (socket.connected) {
+        if (socket && socket.connected) {
             socket.disconnect();
         }
         socket = new SocketMock();

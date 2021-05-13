@@ -27,7 +27,7 @@
   "main": "dist/main.js",
   "scripts": {
     "start": "node dist/main.js",
-    "test": "ava"
+    "test": "ava 'test/**/*.test.js'"
   },
   "dependencies": {
     "express": "4.17.1",

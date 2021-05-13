@@ -1,5 +1,5 @@
 import test from 'ava';
-import testHelper from './test-helper.js';
+import testHelper from './puppeteer-test-helper.js';
 
 const START_PAGE_URL = 'http://localhost:3000';
 

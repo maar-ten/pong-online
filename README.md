@@ -60,3 +60,6 @@ License
 This project's is made public under the GNU GENERAL PUBLIC LICENSE. For more information see the project [LICENSE](LICENSE) file or visit [GNU.org](https://www.gnu.org/licenses/quick-guide-gplv3).
 
 
+CI 🧪
+---
+To run tests locally first start the server with `npm start`, and then start the tests with `npm test`.

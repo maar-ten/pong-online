@@ -24,13 +24,18 @@
   },
   "homepage": "https://github.com/maar-ten/pong-online#readme",
   "type": "module",
-  "main": "src/main.js",
+  "main": "dist/main.js",
   "scripts": {
-    "pong": "node src/main.js",
-    "start": "node --experimental-modules src/main.js"
+    "start": "node dist/main.js",
+    "test": "ava 'test/**/*.test.js'"
   },
   "dependencies": {
     "express": "4.17.1",
     "socket.io": "2.4.0"
+  },
+  "devDependencies": {
+    "ava": "3.15.0",
+    "puppeteer": "9.1.1",
+    "socket.io-client": "2.4.0"
   }
 }

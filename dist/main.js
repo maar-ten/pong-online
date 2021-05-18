@@ -8,17 +8,17 @@
 
 import express from 'express';
 import http from 'http';
-import socketio from 'socket.io';
-import {fileURLToPath} from 'url';
-import {dirname, join} from 'path';
+import { Server } from 'socket.io';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import crypto from 'crypto';
 
-import {GAME_ACTION, GAME_STATE, MESSAGE} from './public/constants.js';
+import { GAME_ACTION, GAME_STATE, MESSAGE } from './public/constants.js';
 import GameSession from './public/assets/GameSession.js';
 
 const app = express();
 const httpServer = http.createServer(app);
-const io = socketio(httpServer);
+const io = new Server(httpServer);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 
@@ -133,7 +133,7 @@ function handleGameAction(socket, data) {
 
 function emitPlayerRejected(socket) {
     console.info('Maximum amount of players exceeded. Disconnecting new player.');
-    socket.emit(MESSAGE.GAME_STATE, {state: GAME_STATE.SERVER_REJECT});
+    socket.emit(MESSAGE.GAME_STATE, { state: GAME_STATE.SERVER_REJECT });
     socket.disconnect(true);
 }
 

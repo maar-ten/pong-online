@@ -1,3 +1,6 @@
+[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/maar-ten/pong-online)
+![Github workflow](https://github.com/maar-ten/pong-online/actions/workflows/node.js.yml/badge.svg)
+
 This is Pong 🏓
 ===
 

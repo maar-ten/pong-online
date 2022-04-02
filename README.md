@@ -28,7 +28,7 @@ Server installation
 ---
 If you want to play online against a friend, you need to install the software on a public server that can accept incoming connnections.
 
-In this case you might want to turn online mode on by default. This can be configured in [src/public/config.js](src/public/config.js).
+In this case you might want to turn online mode on by default. This can be configured in [src/public/config.js](dist/public/config.js).
 
 Then send the url of the server to your friend and have some fun! 🏓
 
@@ -50,7 +50,7 @@ All this software is free to use and is created by many unsung heroes of the int
 
 Game States
 ---
-![Game State Diagram](src/public/assets/images/game-state-diagram.svg)
+![Game State Diagram](dist/public/assets/images/game-state-diagram.svg)
 
 Game states progress by user actions like pressing \<enter\>, or the game logic like scoring a point.
 

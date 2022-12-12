@@ -50,7 +50,7 @@ All this software is free to use and is created by many unsung heroes of the int
 
 Game States
 ---
-![Game State Diagram](src/public/assets/images/game-state-diagram.svg)
+![Game State Diagram](dist/public/assets/images/game-state-diagram.svg)
 
 Game states progress by user actions like pressing \<enter\>, or the game logic like scoring a point.
 

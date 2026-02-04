@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "ava": "6.4.1",
-    "puppeteer": "23.1.0",
+    "puppeteer": "24.36.1",
     "socket.io-client": "4.8.3"
   }
 }

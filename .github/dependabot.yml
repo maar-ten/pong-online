@@ -9,6 +9,13 @@ updates:
     # Check the npm registry for updates once a month
     schedule:
       interval: "monthly"
+    # Group updates into a single PR
+    groups:
+      everything:
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
 
   # Enable version updates for Docker
   - package-ecosystem: "docker"

@@ -11,7 +11,7 @@ updates:
       interval: "monthly"
     # Group updates into a single PR
     groups:
-      everything:
+      npm-packages:
         update-types:
           - "major"
           - "minor"
